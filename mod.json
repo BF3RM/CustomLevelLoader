@@ -1,0 +1,9 @@
+{
+	"Name": "MapLoader",
+	"Authors": ["Powback"],
+	"Description": "Load custom levels created using MapEditor",
+	"URL": "",
+	"Version": "0",
+	"HasWebUI": false,
+	"HasVeniceEXT": true
+}
