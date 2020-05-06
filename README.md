@@ -1,4 +1,4 @@
 # MapLoader
 Load custom levels
 
-Vanilla objects not supported yet
+Vanilla objects and destruction is not supported yet
