@@ -27,7 +27,7 @@ local function PatchOriginalObject(object, world)
 	print(tostring(s_Reference))
 	print("new: " .. tostring(s_Reference.blueprintTransform))
 	print("org: " .. tostring(object.transform))
-	if(isDeleted) then
+	if(object.isDeleted) then
 		s_Reference.excluded = true
 	end
 	s_Reference.blueprintTransform = object.transform
