@@ -5,7 +5,7 @@ local function DecodeParams(p_Table)
         return false
 	end
 	for s_Key, s_Value in pairs(p_Table) do
-		if s_Key == 'transform' then
+		if s_Key == 'transform' or s_Key == 'localTransform'then
 			local s_LinearTransform = LinearTransform(
 					Vec3(s_Value.left.x, s_Value.left.y, s_Value.left.z),
 					Vec3(s_Value.up.x, s_Value.up.y, s_Value.up.z),
@@ -15,7 +15,7 @@ local function DecodeParams(p_Table)
 			p_Table[s_Key] = s_LinearTransform
 
 		elseif type(s_Value) == "table" then
-			DecodeParams(s_Value)
+			p_Table[s_Key] = DecodeParams(s_Value)
 		end
 
 	end

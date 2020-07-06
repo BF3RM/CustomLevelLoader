@@ -30,12 +30,16 @@ local function PatchOriginalObject(object, world)
 	if(object.isDeleted) then
 		s_Reference.excluded = true
 	end
-	s_Reference.blueprintTransform = object.transform
+	if(object.localTransform) then
+		s_Reference.blueprintTransform = LinearTransform(object.localTransform)
+	else
+		s_Reference.blueprintTransform = LinearTransform(object.transform)
+	end
 end
 local function AddCustomObject(object, world)
 	local s_Reference = ReferenceObjectData()
 	customRegistry.referenceObjectRegistry:add(s_Reference)
-	s_Reference.blueprintTransform = LinearTransform(object.transform)
+	s_Reference.blueprintTransform = LinearTransform(object.localTransform)
 	s_Reference.blueprint = Blueprint(ResourceManager:FindInstanceByGuid(Guid(object.blueprintCtrRef.partitionGuid), Guid(object.blueprintCtrRef.instanceGuid)))
 	s_Reference.blueprint:MakeWritable()
 	s_Reference.blueprint.needNetworkId = true
@@ -56,7 +60,6 @@ local function CreateWorldPart()
 	local world = WorldPartData()
 	customRegistry.blueprintRegistry:add(world)
 	for index, object in pairs(CustomLevel.data) do
-		--print(object)
 		if(not object.isVanilla) then
 			AddCustomObject(object, world)
 		else
@@ -65,6 +68,7 @@ local function CreateWorldPart()
 	end
 	local s_WorldPartReference = WorldPartReferenceObjectData()
 	s_WorldPartReference.blueprint = world
+
 	s_WorldPartReference.isEventConnectionTarget = Realm.Realm_None
 	s_WorldPartReference.isPropertyConnectionTarget = Realm.Realm_None
 
