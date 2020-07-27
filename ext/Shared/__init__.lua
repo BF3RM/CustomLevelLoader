@@ -3,7 +3,6 @@
 -- with the real data on the server-side.
 PrimaryLevel = nil
 local function PatchOriginalObject(object, world)
-	print("Patching object: " .. object.guid)
 	if(object.original == nil) then
 		print("Object without original reference found, dynamic object?")
 		return
@@ -24,9 +23,6 @@ local function PatchOriginalObject(object, world)
 	end
 	s_Reference = _G[s_Reference.typeInfo.name](s_Reference)
 	s_Reference:MakeWritable()
-	print(tostring(s_Reference))
-	print("new: " .. tostring(s_Reference.blueprintTransform))
-	print("org: " .. tostring(object.transform))
 	if(object.isDeleted) then
 		s_Reference.excluded = true
 	end
@@ -61,7 +57,9 @@ local function CreateWorldPart()
 	customRegistry.blueprintRegistry:add(world)
 	for index, object in pairs(CustomLevel.data) do
 		if(not object.isVanilla) then
-			AddCustomObject(object, world)
+			if(not CustomLevel.vanillaOnly) then
+				AddCustomObject(object, world)
+			end
 		else
 			PatchOriginalObject(object, world)
 		end
@@ -118,6 +116,10 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 end)
 Events:Subscribe('Level:LoadingInfo', function(p_Info)
 	if(p_Info == "Registering entity resources") then
+		if(not CustomLevel) then
+			print("No custom level specified.")
+			return
+		end
 		print("Patching level")
 		local s_WorldPartReference = CreateWorldPart()
 		s_WorldPartReference.indexInBlueprint = #PrimaryLevel.objects + 6000
