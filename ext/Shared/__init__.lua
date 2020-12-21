@@ -3,21 +3,21 @@
 -- with the real data on the server-side.
 PrimaryLevel = nil
 local function PatchOriginalObject(object, world)
-	if(object.original == nil) then
+	if(object.originalRef == nil) then
 		print("Object without original reference found, dynamic object?")
 		return
 	end
 	local s_Reference = nil
-	if(object.original.partitionGuid == nil or object.original.partitionGuid == "nil") then -- perform a search without partitionguid
-		 s_Reference = ResourceManager:SearchForInstanceByGuid(Guid(object.original.instanceGuid))
+	if(object.originalRef.partitionGuid == nil or object.originalRef.partitionGuid == "nil") then -- perform a search without partitionguid
+		 s_Reference = ResourceManager:SearchForInstanceByGuid(Guid(object.originalRef.instanceGuid))
 		 if(s_Reference == nil) then
-		 	print("Unable to find original reference: " .. object.original.instanceGuid)
+		 	print("Unable to find original reference: " .. object.originalRef.instanceGuid)
 		 	return
 		 end
 	else
-		 s_Reference = ResourceManager:FindInstanceByGuid(Guid(object.original.partitionGuid), Guid(object.original.instanceGuid))
+		 s_Reference = ResourceManager:FindInstanceByGuid(Guid(object.originalRef.partitionGuid), Guid(object.originalRef.instanceGuid))
 		 if(s_Reference == nil) then
-		 	print("Unable to find original reference: " .. object.original.instanceGuid .. " in partition " .. object.original.partitionGuid)
+		 	print("Unable to find original reference: " .. object.originalRef.instanceGuid .. " in partition " .. object.originalRef.partitionGuid)
 		 	return
 		 end
 	end
@@ -27,15 +27,24 @@ local function PatchOriginalObject(object, world)
 		s_Reference.excluded = true
 	end
 	if(object.localTransform) then
+		s_Reference.blueprintTransform = LinearTransform(object.localTransform) -- LinearTransform(object.localTransform)
+	else
+		s_Reference.blueprintTransform = LinearTransform(object.transform) -- LinearTransform(object.transform)
+	end
+end
+local function AddCustomObject(object, world)
+	--[[for k,v in pairs(object) do
+		print("k: " .. k)
+		print("v: " .. v)
+	end]]--
+	local s_Reference = ReferenceObjectData()
+	customRegistry.referenceObjectRegistry:add(s_Reference)
+	if(object.localTransform) then	
 		s_Reference.blueprintTransform = LinearTransform(object.localTransform)
 	else
 		s_Reference.blueprintTransform = LinearTransform(object.transform)
 	end
-end
-local function AddCustomObject(object, world)
-	local s_Reference = ReferenceObjectData()
-	customRegistry.referenceObjectRegistry:add(s_Reference)
-	s_Reference.blueprintTransform = LinearTransform(object.localTransform)
+	--print("AddCustomObject: " .. object.transform)
 	s_Reference.blueprint = Blueprint(ResourceManager:FindInstanceByGuid(Guid(object.blueprintCtrRef.partitionGuid), Guid(object.blueprintCtrRef.instanceGuid)))
 	s_Reference.blueprint:MakeWritable()
 	s_Reference.blueprint.needNetworkId = true
@@ -142,6 +151,5 @@ Events:Subscribe('Level:LoadResources', function()
 	customRegistry = RegistryContainer()
 end)
 Events:Subscribe('Level:RegisterEntityResources', function(levelData)
-	print("Resources")
 	ResourceManager:AddRegistry(customRegistry, ResourceCompartment.ResourceCompartment_Game)
 end)
