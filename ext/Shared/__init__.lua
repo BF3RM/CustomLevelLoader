@@ -61,8 +61,8 @@ local function AddCustomObject(object, world)
 		s_Reference.blueprintTransform = LinearTransform(object.transform)
 	end
 	--print("AddCustomObject: " .. object.transform)
-	s_Reference.blueprint = blueprint
-	s_Reference.blueprint:MakeWritable()
+	s_Reference.blueprint = Blueprint(blueprint)
+	-- s_Reference.blueprint:MakeWritable()
 
 	if(objectVariations[object.variation] == nil) then
 		pendingVariations[object.variation] = s_Reference
@@ -131,7 +131,7 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 	
 	local s_Instances = p_Partition.instances
 
-	for _, l_Instance in ipairs(s_Instances) do
+	for _, l_Instance in pairs(s_Instances) do
 		if l_Instance == nil then
 			print('Instance is null?')
 			break
