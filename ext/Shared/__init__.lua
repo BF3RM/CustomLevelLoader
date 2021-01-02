@@ -2,6 +2,11 @@
 -- the server via NetEvents on the client-side, or overriden
 -- with the real data on the server-side.
 PrimaryLevel = nil
+
+local indexCount = 0
+local customRegistryGuid = Guid('5FAD87FD-9934-4D44-A5BE-7C5B38FCE6AF')
+local registryAdded = false
+
 local function PatchOriginalObject(object, world)
 	if(object.originalRef == nil) then
 		print("Object without original reference found, dynamic object?")
@@ -37,6 +42,17 @@ local function AddCustomObject(object, world)
 		print("k: " .. k)
 		print("v: " .. v)
 	end]]--
+	local blueprint = ResourceManager:FindInstanceByGuid(Guid(object.blueprintCtrRef.partitionGuid), Guid(object.blueprintCtrRef.instanceGuid))
+	if blueprint == nil then
+		print('Cannot find blueprint with guid ' .. tostring(blueprint.instanceGuid))
+	end
+	blueprint = _G[blueprint.typeInfo.name](blueprint)
+
+	-- Filter BangerEntityData.
+	if blueprint:Is('ObjectBlueprint') and blueprint.object and blueprint.object:Is('BangerEntityData') then
+		return
+	end
+
 	local s_Reference = ReferenceObjectData()
 	customRegistry.referenceObjectRegistry:add(s_Reference)
 	if(object.localTransform) then	
@@ -45,16 +61,15 @@ local function AddCustomObject(object, world)
 		s_Reference.blueprintTransform = LinearTransform(object.transform)
 	end
 	--print("AddCustomObject: " .. object.transform)
-	s_Reference.blueprint = Blueprint(ResourceManager:FindInstanceByGuid(Guid(object.blueprintCtrRef.partitionGuid), Guid(object.blueprintCtrRef.instanceGuid)))
+	s_Reference.blueprint = blueprint
 	s_Reference.blueprint:MakeWritable()
-	s_Reference.blueprint.needNetworkId = true
-	--print(s_Reference.blueprint.name)
+
 	if(objectVariations[object.variation] == nil) then
 		pendingVariations[object.variation] = s_Reference
 	else
 		s_Reference.objectVariation = objectVariations[object.variation]
 	end
-	s_Reference.indexInBlueprint = #world.objects + 30001
+	s_Reference.indexInBlueprint = #world.objects + indexCount + 1
 	s_Reference.isEventConnectionTarget = Realm.Realm_None
 	s_Reference.isPropertyConnectionTarget = Realm.Realm_None
 
@@ -64,6 +79,29 @@ end
 local function CreateWorldPart()
 	local world = WorldPartData()
 	customRegistry.blueprintRegistry:add(world)
+	
+	--find index
+	for _, object in pairs(PrimaryLevel.objects) do
+		if object:Is('WorldPartReferenceObjectData') then
+			local obj = WorldPartReferenceObjectData(object)
+			if obj.blueprint:Is('WorldPartData') then
+				local worldPart = WorldPartData(obj.blueprint)
+				if #worldPart.objects ~= 0 then
+					local rod = worldPart.objects[#worldPart.objects] -- last one in array
+					if rod and rod:Is('ReferenceObjectData') then
+						rod = ReferenceObjectData(rod)
+						if rod.indexInBlueprint > indexCount then
+							indexCount = rod.indexInBlueprint
+						end
+					end
+				end
+			end
+		end
+	end
+
+	print('indexCount is:')
+	print(indexCount)
+
 	for index, object in pairs(CustomLevel.data) do
 		if(not object.isVanilla) then
 			if(not CustomLevel.vanillaOnly) then
@@ -73,11 +111,13 @@ local function CreateWorldPart()
 			PatchOriginalObject(object, world)
 		end
 	end
+
 	local s_WorldPartReference = WorldPartReferenceObjectData()
 	s_WorldPartReference.blueprint = world
 
 	s_WorldPartReference.isEventConnectionTarget = Realm.Realm_None
 	s_WorldPartReference.isPropertyConnectionTarget = Realm.Realm_None
+	s_WorldPartReference.excluded = false
 
 	return s_WorldPartReference
 end
@@ -131,25 +171,37 @@ Events:Subscribe('Level:LoadingInfo', function(p_Info)
 		end
 		print("Patching level")
 		local s_WorldPartReference = CreateWorldPart()
-		s_WorldPartReference.indexInBlueprint = #PrimaryLevel.objects + 6000
+
+
+		s_WorldPartReference.indexInBlueprint = #PrimaryLevel.objects
 		PrimaryLevel.objects:add(s_WorldPartReference)
 		local s_Container = PrimaryLevel.registryContainer
 		s_Container:MakeWritable()
 		s_Container.referenceObjectRegistry:add(s_WorldPartReference)
+		print('Level patched')
 	end
 end)
 Events:Subscribe('Level:Destroy', function()
+	if customRegistry then
+		customRegistry.blueprintRegistry:clear()
+		customRegistry.referenceObjectRegistry:clear()
+	end
 	objectVariations = {}
 	pendingVariations = {}
-	customRegistry = nil
+	indexCount = 0
 end)
 
 Events:Subscribe('Level:LoadResources', function()
 	print("Loading resources")
+	customRegistry = customRegistry or RegistryContainer(customRegistryGuid)
 	objectVariations = {}
 	pendingVariations = {}
-	customRegistry = RegistryContainer()
 end)
+
 Events:Subscribe('Level:RegisterEntityResources', function(levelData)
-	ResourceManager:AddRegistry(customRegistry, ResourceCompartment.ResourceCompartment_Game)
+	if not registryAdded then
+		print('Adding custom RegistryContainer')
+		ResourceManager:AddRegistry(customRegistry, ResourceCompartment.ResourceCompartment_Game)
+		registryAdded = true
+	end
 end)
