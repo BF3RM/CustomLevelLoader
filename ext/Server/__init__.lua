@@ -28,18 +28,18 @@ local preset = nil
 Events:Subscribe('Extension:Loaded', function()
 	if(preset ~= nil) then
 		print("Loaded preset: " .. preset.header.projectName)
-		CustomLevel = preset
+		CustomLevelData = preset
 	end
 end)
 
 Events:Subscribe('MapLoader:LoadLevel', function(saveFile)
 	preset = saveFile
-	CustomLevel = preset
+	CustomLevelData = preset
 	print("Got savefile: " .. preset.header.projectName)
 end)
 
 NetEvents:Subscribe('MapLoader:GetLevel', function(player)
 	print('Sending level to ' .. player.name)
-	NetEvents:SendTo('MapLoader:GetLevel', player, CustomLevel)
+	NetEvents:SendTo('MapLoader:GetLevel', player, CustomLevelData)
 end)
 

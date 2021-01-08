@@ -1,11 +1,13 @@
--- This is a global table that will be populated on-demand by
--- the server via NetEvents on the client-side, or overriden
--- with the real data on the server-side.
-PrimaryLevel = nil
+-- Stores LevelData DataContainer.
+local PrimaryLevel = nil
 
+-- This is a global table that stores the save file data as a 
+-- Lua table. Will be populated on-demand by
+-- the server via NetEvents on the client-side
+CustomLevelData = nil
 local indexCount = 0
 local customRegistryGuid = Guid('5FAD87FD-9934-4D44-A5BE-7C5B38FCE6AF')
-local registryAdded = false
+local customRegistry = nil
 
 local function PatchOriginalObject(object, world)
 	if(object.originalRef == nil) then
@@ -46,11 +48,13 @@ local function AddCustomObject(object, world)
 	if blueprint == nil then
 		print('Cannot find blueprint with guid ' .. tostring(blueprint.instanceGuid))
 	end
-	blueprint = _G[blueprint.typeInfo.name](blueprint)
 
 	-- Filter BangerEntityData.
-	if blueprint:Is('ObjectBlueprint') and blueprint.object and blueprint.object:Is('BangerEntityData') then
-		return
+	if blueprint:Is('ObjectBlueprint') then
+		local objectBlueprint = ObjectBlueprint(blueprint)
+		if objectBlueprint.object and objectBlueprint.object:Is('BangerEntityData') then
+			return
+		end
 	end
 
 	local s_Reference = ReferenceObjectData()
@@ -102,9 +106,9 @@ local function CreateWorldPart()
 	print('indexCount is:')
 	print(indexCount)
 
-	for index, object in pairs(CustomLevel.data) do
+	for index, object in pairs(CustomLevelData.data) do
 		if(not object.isVanilla) then
-			if(not CustomLevel.vanillaOnly) then
+			if(not CustomLevelData.vanillaOnly) then
 				AddCustomObject(object, world)
 			end
 		else
@@ -165,11 +169,12 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 end)
 Events:Subscribe('Level:LoadingInfo', function(p_Info)
 	if(p_Info == "Registering entity resources") then
-		if(not CustomLevel) then
+		if(not CustomLevelData) then
 			print("No custom level specified.")
 			return
 		end
 		print("Patching level")
+		customRegistry = customRegistry or RegistryContainer(customRegistryGuid)
 		local s_WorldPartReference = CreateWorldPart()
 
 
@@ -182,10 +187,7 @@ Events:Subscribe('Level:LoadingInfo', function(p_Info)
 	end
 end)
 Events:Subscribe('Level:Destroy', function()
-	if customRegistry then
-		customRegistry.blueprintRegistry:clear()
-		customRegistry.referenceObjectRegistry:clear()
-	end
+	customRegistry = nil
 	objectVariations = {}
 	pendingVariations = {}
 	indexCount = 0
@@ -193,15 +195,11 @@ end)
 
 Events:Subscribe('Level:LoadResources', function()
 	print("Loading resources")
-	customRegistry = customRegistry or RegistryContainer(customRegistryGuid)
 	objectVariations = {}
 	pendingVariations = {}
 end)
 
 Events:Subscribe('Level:RegisterEntityResources', function(levelData)
-	if not registryAdded then
-		print('Adding custom RegistryContainer')
-		ResourceManager:AddRegistry(customRegistry, ResourceCompartment.ResourceCompartment_Game)
-		registryAdded = true
-	end
+	customRegistry = customRegistry or RegistryContainer(customRegistryGuid)
+	ResourceManager:AddRegistry(customRegistry, ResourceCompartment.ResourceCompartment_Game)
 end)

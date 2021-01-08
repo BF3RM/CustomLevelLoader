@@ -10,5 +10,5 @@ NetEvents:Subscribe('MapLoader:GetLevel', function(level)
 		return
 	end
 	print('Received transforms for "' .. level.header.mapName .. '".')
-	CustomLevel = level
+	CustomLevelData = level
 end)
