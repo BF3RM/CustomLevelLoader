@@ -8,6 +8,7 @@ CustomLevelData = nil
 local indexCount = 0
 local customRegistryGuid = Guid('5FAD87FD-9934-4D44-A5BE-7C5B38FCE6AF')
 local customRegistry = nil
+local worldPartRefIndex = nil
 
 local function PatchOriginalObject(object, world)
 	if(object.originalRef == nil) then
@@ -39,6 +40,7 @@ local function PatchOriginalObject(object, world)
 		s_Reference.blueprintTransform = LinearTransform(object.transform) -- LinearTransform(object.transform)
 	end
 end
+
 local function AddCustomObject(object, world)
 	--[[for k,v in pairs(object) do
 		print("k: " .. k)
@@ -126,8 +128,6 @@ local function CreateWorldPart()
 	return s_WorldPartReference
 end
 
-
-
 Events:Subscribe('Partition:Loaded', function(p_Partition)
 	if p_Partition == nil then
 		return
@@ -167,30 +167,46 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 		end
 	end
 end)
+
 Events:Subscribe('Level:LoadingInfo', function(p_Info)
 	if(p_Info == "Registering entity resources") then
 		if(not CustomLevelData) then
 			print("No custom level specified.")
 			return
 		end
+
 		print("Patching level")
 		customRegistry = customRegistry or RegistryContainer(customRegistryGuid)
 		local s_WorldPartReference = CreateWorldPart()
 
-
 		s_WorldPartReference.indexInBlueprint = #PrimaryLevel.objects
+		
 		PrimaryLevel.objects:add(s_WorldPartReference)
+		worldPartRefIndex = #PrimaryLevel.objects
 		local s_Container = PrimaryLevel.registryContainer
 		s_Container:MakeWritable()
 		s_Container.referenceObjectRegistry:add(s_WorldPartReference)
+		refObjRegistryIndex = #s_Container.referenceObjectRegistry
 		print('Level patched')
 	end
 end)
+
 Events:Subscribe('Level:Destroy', function()
-	customRegistry = nil
 	objectVariations = {}
 	pendingVariations = {}
 	indexCount = 0
+	if worldPartRefIndex ~= nil and PrimaryLevel ~= nil then
+		PrimaryLevel.objects:erase(worldPartRefIndex)
+	end
+
+	if refObjRegistryIndex ~= nil and PrimaryLevel ~= nil and PrimaryLevel.registryContainer ~= nil then
+		PrimaryLevel.registryContainer.referenceObjectRegistry:erase(refObjRegistryIndex)
+	end
+	worldPartRefIndex = nil
+	refObjRegistryIndex = nil
+	customRegistry = nil
+
+	-- PrimaryLevel = nil
 end)
 
 Events:Subscribe('Level:LoadResources', function()
