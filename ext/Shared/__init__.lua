@@ -1,3 +1,9 @@
+GameObjectOriginType = {
+	Vanilla = 1,
+	Custom = 2,
+	CustomChild = 3
+}
+
 -- Stores LevelData DataContainer.
 local PrimaryLevel = nil
 
@@ -109,13 +115,14 @@ local function CreateWorldPart()
 	print(indexCount)
 
 	for index, object in pairs(CustomLevelData.data) do
-		if(not object.isVanilla) then
-			if(not CustomLevelData.vanillaOnly) then
+		if object.origin == GameObjectOriginType.Custom then
+			if (not CustomLevelData.vanillaOnly) then
 				AddCustomObject(object, world)
 			end
-		else
+		elseif object.origin == GameObjectOriginType.Vanilla then
 			PatchOriginalObject(object, world)
 		end
+		-- TODO handle CustomChild
 	end
 
 	local s_WorldPartReference = WorldPartReferenceObjectData()
