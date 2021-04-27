@@ -15,6 +15,7 @@ local indexCount = 0
 local customRegistryGuid = Guid('5FAD87FD-9934-4D44-A5BE-7C5B38FCE6AF')
 local customRegistry = nil
 local worldPartRefIndex = nil
+local lastLoadedMap = nil
 
 local function PatchOriginalObject(object, world)
 	if(object.originalRef == nil) then
@@ -114,15 +115,18 @@ local function CreateWorldPart()
 	print('indexCount is:')
 	print(indexCount)
 
-	for index, object in pairs(CustomLevelData.data) do
-		if object.origin == GameObjectOriginType.Custom then
-			if (not CustomLevelData.vanillaOnly) then
-				AddCustomObject(object, world)
+	if lastLoadedMap ~= SharedUtils:GetLevelName() then
+		for index, object in pairs(CustomLevelData.data) do
+			if object.origin == GameObjectOriginType.Custom then
+				if (not CustomLevelData.vanillaOnly) then
+					AddCustomObject(object, world)
+				end
+			elseif object.origin == GameObjectOriginType.Vanilla then
+				PatchOriginalObject(object, world)
 			end
-		elseif object.origin == GameObjectOriginType.Vanilla then
-			PatchOriginalObject(object, world)
+			-- TODO handle CustomChild
 		end
-		-- TODO handle CustomChild
+		lastLoadedMap = SharedUtils:GetLevelName()
 	end
 
 	local s_WorldPartReference = WorldPartReferenceObjectData()
@@ -202,12 +206,13 @@ Events:Subscribe('Level:Destroy', function()
 	objectVariations = {}
 	pendingVariations = {}
 	indexCount = 0
+	-- TODO: Check if the next map is the same level (or gamemode)
 	if worldPartRefIndex ~= nil and PrimaryLevel ~= nil then
-		PrimaryLevel.objects:erase(worldPartRefIndex)
+	--	PrimaryLevel.objects:erase(worldPartRefIndex)
 	end
 
 	if refObjRegistryIndex ~= nil and PrimaryLevel ~= nil and PrimaryLevel.registryContainer ~= nil then
-		PrimaryLevel.registryContainer.referenceObjectRegistry:erase(refObjRegistryIndex)
+	--	PrimaryLevel.registryContainer.referenceObjectRegistry:erase(refObjRegistryIndex)
 	end
 	worldPartRefIndex = nil
 	refObjRegistryIndex = nil
