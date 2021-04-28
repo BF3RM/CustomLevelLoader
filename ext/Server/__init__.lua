@@ -1,6 +1,6 @@
 --local presetJSON = require "preset"
 local function DecodeParams(p_Table)
-    if(p_Table == nil) then
+    if p_Table == nil then
         print("No table received")
         return false
 	end
@@ -24,22 +24,22 @@ local function DecodeParams(p_Table)
 end
 
 
-local preset = nil
+local m_Preset = nil
 Events:Subscribe('Extension:Loaded', function()
-	if(preset ~= nil) then
-		print("Loaded preset: " .. preset.header.projectName)
-		CustomLevelData = preset
+	if m_Preset ~= nil then
+		print("Loaded preset: " .. m_Preset.header.projectName)
+		g_CustomLevelData = m_Preset
 	end
 end)
 
-Events:Subscribe('MapLoader:LoadLevel', function(saveFile)
-	preset = saveFile
-	CustomLevelData = preset
-	print("Got savefile: " .. preset.header.projectName)
+Events:Subscribe('MapLoader:LoadLevel', function(p_SaveFile)
+	m_Preset = p_SaveFile
+	g_CustomLevelData = m_Preset
+	print("Got savefile: " .. m_Preset.header.projectName)
 end)
 
-NetEvents:Subscribe('MapLoader:GetLevel', function(player)
-	print('Sending level to ' .. player.name)
-	NetEvents:SendTo('MapLoader:GetLevel', player, CustomLevelData)
+NetEvents:Subscribe('MapLoader:GetLevel', function(p_Player)
+	print('Sending level to ' .. p_Player.name)
+	NetEvents:SendTo('MapLoader:GetLevel', p_Player, g_CustomLevelData)
 end)
 
