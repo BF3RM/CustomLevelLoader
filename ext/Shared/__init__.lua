@@ -62,7 +62,15 @@ local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
 		end
 	end
 
-	local s_Reference = ReferenceObjectData()
+
+	local s_Reference
+	if s_Blueprint:Is('EffectBlueprint') then
+		s_Reference = EffectReferenceObjectData()
+		s_Reference.autoStart = true
+	else
+		s_Reference = ReferenceObjectData()
+	end
+
 	p_RegistryContainer.referenceObjectRegistry:add(s_Reference)
 	if p_Object.localTransform then	
 		s_Reference.blueprintTransform = LinearTransform(p_Object.localTransform)
@@ -81,6 +89,7 @@ local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
 	s_Reference.indexInBlueprint = #p_World.objects + m_IndexCount + 1
 	s_Reference.isEventConnectionTarget = Realm.Realm_None
 	s_Reference.isPropertyConnectionTarget = Realm.Realm_None
+	s_Reference.excluded = false
 
 	p_World.objects:add(s_Reference)
 end
