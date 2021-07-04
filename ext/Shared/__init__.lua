@@ -72,7 +72,7 @@ local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
 	end
 
 	p_RegistryContainer.referenceObjectRegistry:add(s_Reference)
-	if p_Object.localTransform then	
+	if p_Object.localTransform then
 		s_Reference.blueprintTransform = LinearTransform(p_Object.localTransform)
 	else
 		s_Reference.blueprintTransform = LinearTransform(p_Object.transform)
@@ -97,7 +97,7 @@ end
 local function CreateWorldPart(p_PrimaryLevel, p_RegistryContainer)
 	local s_World = WorldPartData()
 	p_RegistryContainer.blueprintRegistry:add(s_World)
-	
+
 	--find index
 	for _, l_Object in pairs(p_PrimaryLevel.objects) do
 		if l_Object:Is('WorldPartReferenceObjectData') then
@@ -148,47 +148,45 @@ Events:Subscribe('Level:LoadResources', function()
 	m_PendingVariations = {}
 end)
 
--- nº 2 in calling order 
+-- nº 2 in calling order
 Events:Subscribe('Partition:Loaded', function(p_Partition)
 	if p_Partition == nil then
 		return
 	end
-	
-	local s_Instances = p_Partition.instances
 
-	for _, l_Instance in pairs(s_Instances) do
-		if l_Instance == nil then
-			print('Instance is null?')
-			break
+	local s_PrimaryInstance = p_Partition.primaryInstance
+
+	if s_PrimaryInstance == nil then
+		print('Instance is null?')
+		return
+	end
+	-- if l_Instance:Is("Blueprint") then
+		--print("-------"..Blueprint(l_Instance).name)
+	-- end
+	if s_PrimaryInstance.typeInfo.name == "LevelData" then
+		local s_Instance = LevelData(s_PrimaryInstance)
+		if (s_Instance.name == SharedUtils:GetLevelName()) then
+			print("----Registering PrimaryLevel guids")
+			s_Instance:MakeWritable()
+
+			m_CustomLevelData = {
+				instanceGuid = s_Instance.instanceGuid,
+				partitionGuid = s_Instance.partitionGuid
+			}
+			if (SharedUtils:IsClientModule()) then
+				NetEvents:Send('MapLoader:GetLevel')
+			end
 		end
-		-- if l_Instance:Is("Blueprint") then
-			--print("-------"..Blueprint(l_Instance).name)
-		-- end
-		if l_Instance.typeInfo.name == "LevelData" then
-			local s_Instance = LevelData(l_Instance)
-			if (s_Instance.name == SharedUtils:GetLevelName()) then
-				print("----Registering PrimaryLevel guids")
-				s_Instance:MakeWritable()
-
-				m_CustomLevelData = {
-					instanceGuid = s_Instance.instanceGuid,
-					partitionGuid = s_Instance.partitionGuid
-				}
-				if (SharedUtils:IsClientModule()) then
-					NetEvents:Send('MapLoader:GetLevel')
-				end
+	elseif s_PrimaryInstance:Is('ObjectVariation') then
+		-- Store all variations in a map.
+		local s_Variation = ObjectVariation(s_PrimaryInstance)
+		m_ObjectVariations[s_Variation.nameHash] = s_Variation
+		if m_PendingVariations[s_Variation.nameHash] ~= nil then
+			for _, l_Object in pairs(m_PendingVariations[s_Variation.nameHash]) do
+				l_Object.objectVariation = s_Variation
 			end
-		elseif l_Instance:Is('ObjectVariation') then
-			-- Store all variations in a map.
-			local s_Variation = ObjectVariation(l_Instance)
-			m_ObjectVariations[s_Variation.nameHash] = s_Variation
-			if m_PendingVariations[s_Variation.nameHash] ~= nil then
-				for _, l_Object in pairs(m_PendingVariations[s_Variation.nameHash]) do
-					l_Object.objectVariation = s_Variation
-				end
 
-				m_PendingVariations[s_Variation.nameHash] = nil
-			end
+			m_PendingVariations[s_Variation.nameHash] = nil
 		end
 	end
 end)
@@ -233,7 +231,7 @@ Events:Subscribe('Level:LoadingInfo', function(p_Info)
 		local s_WorldPartReference = CreateWorldPart(s_PrimaryLevel, s_RegistryContainer)
 
 		s_WorldPartReference.indexInBlueprint = #s_PrimaryLevel.objects
-		
+
 		s_PrimaryLevel.objects:add(s_WorldPartReference)
 
 		-- Save original indeces in case LevelData has to be reset to default state later.
