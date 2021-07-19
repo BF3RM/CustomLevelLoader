@@ -141,7 +141,14 @@ local function CreateWorldPart(p_PrimaryLevel, p_RegistryContainer)
 end
 
 local function GetCustomLevel(p_LevelName, p_GameModeName)
-    local s_PresetJson = require '__shared/Levels/' .. p_LevelName .. '/' .. p_LevelName  .. '_' .. p_GameModeName
+	print(p_LevelName)
+	print(p_GameModeName)
+	local s_LevelName = p_LevelName:split('/')[3]
+	print(s_LevelName)
+
+	local s_Path = '__shared/Levels/' .. s_LevelName .. '/' .. s_LevelName .. '_' .. p_GameModeName
+	local s_Ok, s_PresetJson = pcall(require, s_Path)
+	s_PresetJson = s_Ok and s_PresetJson or nil
 
     if not s_PresetJson then
         print('Couldnt find custom level data for Level: ' .. p_LevelName .. ' - GameMode: ' .. p_GameModeName)
@@ -280,3 +287,10 @@ Events:Subscribe('Level:Destroy', function()
 	-- the same map but a different save, once that is implemented. If it's a different map
 	-- there is no need to clear anything, as the leveldata will be unloaded and a new one loaded
 end)
+
+function string:split(sep)
+	local sep, fields = sep or ":", {}
+	local pattern = string.format("([^%s]+)", sep)
+	self:gsub(pattern, function(c) fields[#fields+1] = c end)
+	return fields
+end
