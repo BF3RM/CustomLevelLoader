@@ -12,4 +12,4 @@ The CustomLevelsLoader will then automatically load that preset when the accordi
 
 This mod is currently a WIP. Destruction and data modifications not supported yet. There will be updates to the orginal mod, so make sure to keep your forks up to date. 
 
-**It's mandatory to use ``-skipchecksum`` parameter in your server, or it will lead to client connection errors**
+**It's mandatory to use ``-skipChecksum`` parameter in your server, or it will lead to client connection errors**
