@@ -147,6 +147,9 @@ local function GetCustomLevel(p_LevelName, p_GameModeName)
 	print(s_LevelName)
 
 	local s_Path = '__shared/Levels/' .. s_LevelName .. '/' .. s_LevelName .. '_' .. p_GameModeName
+
+	print(s_Path)
+
 	local s_Ok, s_PresetJson = pcall(require, s_Path)
 	s_PresetJson = s_Ok and s_PresetJson or nil
 
@@ -161,6 +164,8 @@ local function GetCustomLevel(p_LevelName, p_GameModeName)
         error('Couldnt decode json preset')
         return nil
     end
+
+	print("preset found: " .. s_Path:split('/')[4])
 
     return s_Preset
 end
