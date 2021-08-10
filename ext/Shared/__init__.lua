@@ -14,7 +14,6 @@ local m_ObjectVariations = {}
 local m_PendingVariations = {}
 local m_PrimaryLevelGuids = {}
 local m_CustomLevelData = {}
-local m_WorldPartReference = nil
 local m_World = nil
 
 local function PatchOriginalObject(p_Object)
@@ -121,16 +120,6 @@ local function AddCustomObject(p_Object)
 	m_World.objects:add(s_Reference)
 end
 
-local function CreateWorldPart()
-	m_World = WorldPartData(Guid("ADC31E4A-AF50-94EC-9628-E21026DF9B7D"))
-
-	m_WorldPartReference = WorldPartReferenceObjectData(Guid("9F1DA12C-4DE6-528D-F0FB-4D391BC4510F"))
-
-	m_WorldPartReference.isEventConnectionTarget = Realm.Realm_None
-	m_WorldPartReference.isPropertyConnectionTarget = Realm.Realm_None
-	m_WorldPartReference.excluded = false
-end
-
 local function GetCustomLevel(p_LevelName, p_GameModeName)
 	local s_LevelName = p_LevelName:gsub(".*/", "")
 
@@ -164,7 +153,7 @@ local function GetIndexCount(p_PrimaryLevel)
 		if l_Object:Is('WorldPartReferenceObjectData') then
 			local l_RefObjectData = WorldPartReferenceObjectData(l_Object)
 
-			if l_RefObjectData.blueprint:Is('WorldPartData') then
+			if l_RefObjectData.blueprint ~= nil and l_RefObjectData.blueprint:Is('WorldPartData') then
 				local s_WorldPart = WorldPartData(l_RefObjectData.blueprint)
 
 				if #s_WorldPart.objects ~= 0 then
@@ -192,7 +181,7 @@ Events:Subscribe('Level:LoadResources', function()
 	m_PendingVariations = {}
 
 	m_CustomLevelData = GetCustomLevel(SharedUtils:GetLevelName(), SharedUtils:GetCurrentGameMode())
-	CreateWorldPart()
+	m_World = WorldPartData(Guid("ADC31E4A-AF50-94EC-9628-E21026DF9B7D"))
 
 	for _, l_Object in pairs(m_CustomLevelData.data) do
 		ResourceManager:RegisterInstanceLoadHandlerOnce(Guid(l_Object.blueprintCtrRef.partitionGuid), Guid(l_Object.blueprintCtrRef.instanceGuid), function(p_Instance)
@@ -238,18 +227,18 @@ Events:Subscribe('Level:LoadingInfo', function(p_ScreenInfo)
 	s_RegistryContainer = RegistryContainer(s_RegistryContainer)
 	s_RegistryContainer:MakeWritable()
 
-	s_RegistryContainer.blueprintRegistry:add(m_World)
-	m_WorldPartReference.blueprint = m_World
-	m_WorldPartReference.indexInBlueprint = #s_PrimaryLevel.objects + 1
-	s_RegistryContainer.referenceObjectRegistry:add(m_WorldPartReference)
+	local s_WorldPartReference = WorldPartReferenceObjectData(s_PrimaryLevel.objects[#s_PrimaryLevel.objects])
+	s_WorldPartReference.blueprint = m_World
 
-	for l_Index, l_Reference in pairs(WorldPartData(m_WorldPartReference.blueprint).objects) do
+	for l_Index, l_Reference in pairs(WorldPartData(s_WorldPartReference.blueprint).objects) do
 		l_Reference = _G[l_Reference.typeInfo.name](l_Reference)
 		s_RegistryContainer.referenceObjectRegistry:add(l_Reference)
 		l_Reference.indexInBlueprint = l_Index + s_IndexCount
 	end
 
-	s_PrimaryLevel.objects:add(m_WorldPartReference)
+	s_RegistryContainer.blueprintRegistry:add(m_World)
+	s_RegistryContainer.referenceObjectRegistry:add(s_WorldPartReference)
+
 
 	-- Save original indeces in case LevelData has to be reset to default state later.
 	m_OriginalLevelIndeces = {
@@ -259,7 +248,6 @@ Events:Subscribe('Level:LoadingInfo', function(p_ScreenInfo)
 		entity = #s_RegistryContainer.entityRegistry
 	}
 
-	m_WorldPartReference = nil
 	m_World = nil
 
 	print("Patched level")
@@ -298,6 +286,15 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 				print('Same map loading, skipping')
 				return
 			end
+
+			local s_WorldPartReference = WorldPartReferenceObjectData(Guid("9F1DA12C-4DE6-528D-F0FB-4D391BC4510F"))
+
+			s_WorldPartReference.indexInBlueprint = #s_PrimaryLevel.objects + 1
+			s_WorldPartReference.isEventConnectionTarget = Realm.Realm_None
+			s_WorldPartReference.isPropertyConnectionTarget = Realm.Realm_None
+			s_WorldPartReference.excluded = false
+
+			s_PrimaryLevel.objects:add(s_WorldPartReference)
 
 			m_LastLoadedMap = SharedUtils:GetLevelName()
 		end
