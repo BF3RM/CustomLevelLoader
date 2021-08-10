@@ -52,6 +52,7 @@ local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
 	local s_Blueprint = ResourceManager:FindInstanceByGuid(Guid(p_Object.blueprintCtrRef.partitionGuid), Guid(p_Object.blueprintCtrRef.instanceGuid))
 	if s_Blueprint == nil then
 		print('Cannot find blueprint with guid ' .. tostring(p_Object.blueprintCtrRef.instanceGuid))
+		return
 	end
 
 	-- Filter BangerEntityData.
