@@ -108,7 +108,11 @@ local function AddCustomObject(p_Object)
 	s_Reference.blueprint = Blueprint(s_Blueprint)
 
 	if m_ObjectVariations[p_Object.variation] == nil then
-		m_PendingVariations[p_Object.variation] = s_Reference
+		if m_PendingVariations[p_Object.variation] == nil then
+			m_PendingVariations[p_Object.variation] = {}
+		end
+
+		table.insert(m_PendingVariations[p_Object.variation], s_Reference)
 	else
 		s_Reference.objectVariation = m_ObjectVariations[p_Object.variation]
 	end
@@ -328,7 +332,10 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 		m_ObjectVariations[s_Variation.nameHash] = s_Variation
 
 		if m_PendingVariations[s_Variation.nameHash] ~= nil then
-			m_PendingVariations[s_Variation.nameHash].objectVariation = s_Variation
+			for _, l_Object in pairs(m_PendingVariations[s_Variation.nameHash]) do
+				l_Object.objectVariation = s_Variation
+			end
+
 			m_PendingVariations[s_Variation.nameHash] = nil
 		end
 	end
