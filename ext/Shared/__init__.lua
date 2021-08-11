@@ -9,7 +9,7 @@ GameObjectOriginType = {
 -- the server via NetEvents on the client-side
 -- Stores LevelData DataContainer guids.
 local m_OriginalLevelIndeces = {}
-local m_LastLoadedMap = nil
+local m_LastLoadedLevelName = nil
 local m_ObjectVariations = {}
 local m_PendingVariations = {}
 local m_PrimaryLevelGuids = {}
@@ -177,10 +177,27 @@ end
 -- nº 1 in calling order
 Events:Subscribe('Level:LoadResources', function()
 	print("-----Loading resources")
+
+	if m_LastLoadedLevelName == SharedUtils:GetLevelName() then
+		print('Same level loading, skipping')
+		return
+	end
+
 	m_ObjectVariations = {}
 	m_PendingVariations = {}
 
 	m_CustomLevelData = GetCustomLevel(SharedUtils:GetLevelName(), SharedUtils:GetCurrentGameMode())
+
+	if m_CustomLevelData == nil then
+		return
+	end
+
+	if m_CustomLevelData.data == nil then
+		print("Custom Level preset is in a wrong format, abort.")
+		m_CustomLevelData = nil
+		return
+	end
+
 	m_World = WorldPartData(Guid("ADC31E4A-AF50-94EC-9628-E21026DF9B7D"))
 
 	for _, l_Object in pairs(m_CustomLevelData.data) do
@@ -204,7 +221,21 @@ Events:Subscribe('Level:LoadingInfo', function(p_ScreenInfo)
 		return
 	end
 
+	if m_CustomLevelData == nil then
+		return
+	end
+
+	if m_PrimaryLevelGuids.instanceGuid == nil then
+		print("No PrimaryLevelGuids available.")
+		return
+	end
+
+	if m_LastLoadedLevelName == SharedUtils:GetLevelName() then
+		return
+	end
+
 	print("Patching level")
+	m_LastLoadedLevelName = SharedUtils:GetLevelName()
 
 	local s_PrimaryLevel = ResourceManager:FindInstanceByGuid(m_PrimaryLevelGuids.partitionGuid, m_PrimaryLevelGuids.instanceGuid)
 
@@ -232,8 +263,8 @@ Events:Subscribe('Level:LoadingInfo', function(p_ScreenInfo)
 
 	for l_Index, l_Reference in pairs(WorldPartData(s_WorldPartReference.blueprint).objects) do
 		l_Reference = _G[l_Reference.typeInfo.name](l_Reference)
-		s_RegistryContainer.referenceObjectRegistry:add(l_Reference)
 		l_Reference.indexInBlueprint = l_Index + s_IndexCount
+		s_RegistryContainer.referenceObjectRegistry:add(l_Reference)
 	end
 
 	s_RegistryContainer.blueprintRegistry:add(m_World)
@@ -282,11 +313,6 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 				partitionGuid = s_PrimaryLevel.partitionGuid
 			}
 
-			if m_LastLoadedMap == SharedUtils:GetLevelName() then
-				print('Same map loading, skipping')
-				return
-			end
-
 			local s_WorldPartReference = WorldPartReferenceObjectData(Guid("9F1DA12C-4DE6-528D-F0FB-4D391BC4510F"))
 
 			s_WorldPartReference.indexInBlueprint = #s_PrimaryLevel.objects + 1
@@ -295,8 +321,6 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 			s_WorldPartReference.excluded = false
 
 			s_PrimaryLevel.objects:add(s_WorldPartReference)
-
-			m_LastLoadedMap = SharedUtils:GetLevelName()
 		end
 	elseif s_PrimaryInstance:Is('ObjectVariation') then
 		-- Store all variations in a map.
