@@ -107,7 +107,7 @@ local function AddCustomObject(p_Object)
 
 	s_Reference.blueprint = Blueprint(s_Blueprint)
 
-	if m_ObjectVariations[p_Object.variation] == nil then
+	if m_ObjectVariations[p_Object.variation] == nil and p_Object.variation ~= 0 then
 		if m_PendingVariations[p_Object.variation] == nil then
 			m_PendingVariations[p_Object.variation] = {}
 		end
