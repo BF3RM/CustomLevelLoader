@@ -225,6 +225,12 @@ Events:Subscribe('Level:LoadingInfo', function(p_ScreenInfo)
 		return
 	end
 
+	if m_LastLoadedLevelName == SharedUtils:GetLevelName() then
+		return
+	end
+
+	m_LastLoadedLevelName = SharedUtils:GetLevelName()
+
 	if m_CustomLevelData == nil then
 		return
 	end
@@ -234,12 +240,7 @@ Events:Subscribe('Level:LoadingInfo', function(p_ScreenInfo)
 		return
 	end
 
-	if m_LastLoadedLevelName == SharedUtils:GetLevelName() then
-		return
-	end
-
 	print("Patching level")
-	m_LastLoadedLevelName = SharedUtils:GetLevelName()
 
 	local s_PrimaryLevel = ResourceManager:FindInstanceByGuid(m_PrimaryLevelGuids.partitionGuid, m_PrimaryLevelGuids.instanceGuid)
 
@@ -262,7 +263,28 @@ Events:Subscribe('Level:LoadingInfo', function(p_ScreenInfo)
 	s_RegistryContainer = RegistryContainer(s_RegistryContainer)
 	s_RegistryContainer:MakeWritable()
 
-	local s_WorldPartReference = WorldPartReferenceObjectData(s_PrimaryLevel.objects[#s_PrimaryLevel.objects])
+	local s_WorldPartReference = nil
+
+	for l_Index = #s_PrimaryLevel.objects, 1, -1 do
+		if s_PrimaryLevel.objects[l_Index].instanceGuid ~= nil and
+		s_PrimaryLevel.objects[l_Index].instanceGuid == Guid("9F1DA12C-4DE6-528D-F0FB-4D391BC4510F") then
+			s_WorldPartReference = WorldPartReferenceObjectData(s_PrimaryLevel.objects[l_Index])
+			break
+		end
+	end
+
+	if s_WorldPartReference == nil then
+		print("WorldPartReferenceObjectData not found. Adding it again.")
+		s_WorldPartReference = WorldPartReferenceObjectData(Guid("9F1DA12C-4DE6-528D-F0FB-4D391BC4510F"))
+
+		s_WorldPartReference.indexInBlueprint = #s_PrimaryLevel.objects + 1
+		s_WorldPartReference.isEventConnectionTarget = Realm.Realm_None
+		s_WorldPartReference.isPropertyConnectionTarget = Realm.Realm_None
+		s_WorldPartReference.excluded = false
+
+		s_PrimaryLevel.objects:add(s_WorldPartReference)
+	end
+
 	s_WorldPartReference.blueprint = m_World
 
 	for l_Index, l_Reference in pairs(WorldPartData(s_WorldPartReference.blueprint).objects) do
