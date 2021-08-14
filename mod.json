@@ -1,8 +1,8 @@
 {
-	"Name": "CustomLevelsLoader",
+	"Name": "CustomLevelLoader",
 	"Authors": ["RM Dev Team"],
 	"Description": "Load custom levels created using MapEditor",
-	"URL": "https://github.com/BF3RM/CustomLevelsLoader",
+	"URL": "https://github.com/BF3RM/CustomLevelLoader",
 	"Version": "1.0.0",
 	"HasWebUI": false,
 	"HasVeniceEXT": true,

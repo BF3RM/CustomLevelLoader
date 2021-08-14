@@ -1,4 +1,4 @@
-# CustomLevelsLoader
+# CustomLevelLoader
 
 Load your custom levels by putting your custom level presets created with MapEditor into a "Levels" subfolder following this convention:
 
@@ -8,7 +8,7 @@ Check the realitymod branch for an example on how to use it:
 
 Levels/XP3_Shield/XP3_Shield_ConquestLarge0.lua
 
-The CustomLevelsLoader will then automatically load that preset when the according level and gamemode is loaded.
+The CustomLevelLoader will then automatically load that preset when the according level and gamemode is loaded.
 
 ## Important
 
