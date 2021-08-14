@@ -294,6 +294,24 @@ Events:Subscribe('Level:Destroy', function()
 	-- there is no need to clear anything, as the leveldata will be unloaded and a new one loaded
 end)
 
+ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8ACE0D9B4'), Guid('818334B3-CEA6-FC3F-B524-4A0FED28CA35'), function(p_Instance)
+	if SharedUtils:IsClientModule()	then
+		p_Instance = ClientSettings(p_Instance)
+		p_Instance:MakeWritable()
+		p_Instance.loadedTimeout = 25
+		p_Instance.loadingTimeout = 25
+		p_Instance.ingameTimeout = 25
+		print("Changed ClientSettings")
+	else
+		p_Instance = ServerSettings(p_Instance)
+		p_Instance:MakeWritable()
+		p_Instance.loadingTimeout = 25
+		p_Instance.ingameTimeout = 25
+		p_Instance.timeoutTime = 25
+		print("Changed ServerSettings")
+	end
+end)
+
 function string:split(sep)
 	local sep, fields = sep or ":", {}
 	local pattern = string.format("([^%s]+)", sep)
