@@ -80,16 +80,6 @@ local function AddCustomObject(p_Object)
 		return
 	end
 
-	-- Filter BangerEntityData.
-	if s_Blueprint:Is('ObjectBlueprint') then
-		local s_ObjectBlueprint = ObjectBlueprint(s_Blueprint)
-
-		if s_ObjectBlueprint.object and s_ObjectBlueprint.object:Is('BangerEntityData') then
-			print("Cannot add custom object that is a BangerEntityData")
-			return
-		end
-	end
-
 	local s_Reference = nil
 
 	if s_Blueprint:Is('EffectBlueprint') then
