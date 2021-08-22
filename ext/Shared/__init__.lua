@@ -17,49 +17,8 @@ local m_PrimaryLevelGuids = {}
 local m_CustomLevelData = {}
 local m_World = nil
 
-local function PatchOriginalObject(p_Object)
-	if p_Object.originalRef == nil then
-		print("Object without original reference found, dynamic object?")
-		return
-	end
-
-	local s_Reference = nil
-
-	if p_Object.originalRef.partitionGuid == nil or p_Object.originalRef.partitionGuid == "nil" then -- perform a search without partitionguid
-		s_Reference = ResourceManager:SearchForInstanceByGuid(Guid(p_Object.originalRef.instanceGuid))
-
-		if s_Reference == nil then
-			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid)
-			return
-		end
-	else
-		s_Reference = ResourceManager:FindInstanceByGuid(Guid(p_Object.originalRef.partitionGuid), Guid(p_Object.originalRef.instanceGuid))
-
-		if s_Reference == nil then
-			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid .. " in partition " .. p_Object.originalRef.partitionGuid)
-
-			ResourceManager:RegisterInstanceLoadHandlerOnce(Guid(p_Object.originalRef.partitionGuid), Guid(p_Object.originalRef.instanceGuid), function(p_Instance)
-				s_Reference = _G[p_Instance.typeInfo.name](p_Instance)
-				s_Reference:MakeWritable()
-
-				if p_Object.isDeleted then
-					s_Reference.excluded = true
-				end
-
-				if p_Object.localTransform then
-					s_Reference.blueprintTransform = LinearTransform(p_Object.localTransform) -- LinearTransform(p_Object.localTransform)
-				else
-					s_Reference.blueprintTransform = LinearTransform(p_Object.transform) -- LinearTransform(p_Object.transform)
-				end
-
-				print("Fixed original reference: " .. tostring(s_Reference.instanceGuid) .. " in partition " .. tostring(s_Reference.partitionGuid))
-			end)
-
-			return
-		end
-	end
-
-	s_Reference = _G[s_Reference.typeInfo.name](s_Reference)
+local function PatchOriginalObject(p_Object, p_Instance)
+	local s_Reference = _G[p_Instance.typeInfo.name](p_Instance)
 	s_Reference:MakeWritable()
 
 	if p_Object.isDeleted then
@@ -73,17 +32,10 @@ local function PatchOriginalObject(p_Object)
 	end
 end
 
-local function AddCustomObject(p_Object)
-	local s_Blueprint = ResourceManager:FindInstanceByGuid(Guid(p_Object.blueprintCtrRef.partitionGuid), Guid(p_Object.blueprintCtrRef.instanceGuid))
-
-	if s_Blueprint == nil then
-		print('Cannot find blueprint with guid ' .. tostring(p_Object.blueprintCtrRef.instanceGuid))
-		return
-	end
-
+local function AddCustomObject(p_Object, p_Instance)
 	local s_Reference = nil
 
-	if s_Blueprint:Is('EffectBlueprint') then
+	if p_Instance:Is('EffectBlueprint') then
 		s_Reference = EffectReferenceObjectData()
 		s_Reference.autoStart = true
 	else
@@ -96,7 +48,7 @@ local function AddCustomObject(p_Object)
 		s_Reference.blueprintTransform = LinearTransform(p_Object.transform)
 	end
 
-	s_Reference.blueprint = Blueprint(s_Blueprint)
+	s_Reference.blueprint = Blueprint(p_Instance)
 
 	if m_ObjectVariations[p_Object.variation] == nil and p_Object.variation ~= 0 then
 		if m_PendingVariations[p_Object.variation] == nil then
@@ -196,15 +148,17 @@ Events:Subscribe('Level:LoadResources', function()
 	m_World = WorldPartData(Guid("ADC31E4A-AF50-94EC-9628-E21026DF9B7D"))
 
 	for _, l_Object in pairs(m_CustomLevelData.data) do
-		ResourceManager:RegisterInstanceLoadHandlerOnce(Guid(l_Object.blueprintCtrRef.partitionGuid), Guid(l_Object.blueprintCtrRef.instanceGuid), function(p_Instance)
-			if l_Object.origin == GameObjectOriginType.Custom then
-				if not m_CustomLevelData.vanillaOnly then
-					AddCustomObject(l_Object)
-				end
-			elseif l_Object.origin == GameObjectOriginType.Vanilla then
-				PatchOriginalObject(l_Object)
+		if l_Object.origin == GameObjectOriginType.Custom then
+			if not m_CustomLevelData.vanillaOnly then
+				ResourceManager:RegisterInstanceLoadHandlerOnce(Guid(l_Object.blueprintCtrRef.partitionGuid), Guid(l_Object.blueprintCtrRef.instanceGuid), function(p_Instance)
+					AddCustomObject(l_Object, p_Instance)
+				end)
 			end
-		end)
+		elseif l_Object.origin == GameObjectOriginType.Vanilla then
+			ResourceManager:RegisterInstanceLoadHandlerOnce(Guid(l_Object.originalRef.partitionGuid), Guid(l_Object.originalRef.instanceGuid), function(p_Instance)
+				PatchOriginalObject(l_Object, p_Instance)
+			end)
+		end
 	end
 end)
 
