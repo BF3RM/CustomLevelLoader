@@ -4,6 +4,7 @@ GameObjectOriginType = {
 	CustomChild = 3
 }
 
+local CLIENT_TIMEOUT = 25
 
 -- This is a global table that stores the save file data as a Lua table. Will be populated on-demand by
 -- the server via NetEvents on the client-side
@@ -361,4 +362,22 @@ Events:Subscribe('Level:Destroy', function()
 	-- TODO: remove all custom objects from level registry and leveldata if next round is
 	-- the same map but a different save, once that is implemented. If it's a different map
 	-- there is no need to clear anything, as the leveldata will be unloaded and a new one loaded
+end)
+
+ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8ACE0D9B4'), Guid('B479A8FA-67FF-8825-9421-B31DE95B551A'), function(p_Instance)
+	p_Instance = ClientSettings(p_Instance)
+	p_Instance:MakeWritable()
+	p_Instance.loadedTimeout = CLIENT_TIMEOUT
+	p_Instance.loadingTimeout = CLIENT_TIMEOUT
+	p_Instance.ingameTimeout = CLIENT_TIMEOUT
+	print("Changed ClientSettings")
+end)
+
+ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8ACE0D9B4'), Guid('818334B3-CEA6-FC3F-B524-4A0FED28CA35'), function(p_Instance)
+	p_Instance = ServerSettings(p_Instance)
+	p_Instance:MakeWritable()
+	p_Instance.loadingTimeout = CLIENT_TIMEOUT
+	p_Instance.ingameTimeout = CLIENT_TIMEOUT
+	p_Instance.timeoutTime = CLIENT_TIMEOUT
+	print("Changed ServerSettings")
 end)
