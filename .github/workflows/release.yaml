@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Publish to VUMM
         uses: BF3RM/vumm-action@v1
         env:
