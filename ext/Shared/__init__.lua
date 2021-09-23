@@ -91,6 +91,7 @@ local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
 	s_Reference.indexInBlueprint = #p_World.objects + m_IndexCount + 1
 	s_Reference.isEventConnectionTarget = Realm.Realm_None
 	s_Reference.isPropertyConnectionTarget = Realm.Realm_None
+	s_Reference.castSunShadowEnable = true
 	s_Reference.excluded = false
 
 	p_World.objects:add(s_Reference)
