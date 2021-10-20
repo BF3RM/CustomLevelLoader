@@ -13,7 +13,8 @@ local m_PrimaryLevelGuids = nil
 
 local m_IndexCount = 0
 local m_OriginalLevelIndeces = {}
-local m_LastLoadedMap = nil
+local m_LastLoadedLevelName = nil
+local m_LastLoadedGameModeName = nil
 local m_ObjectVariations = {}
 local m_PendingVariations = {}
 local m_PrimaryLevelGuids = { }
@@ -132,7 +133,9 @@ local function CreateWorldPart(p_PrimaryLevel, p_RegistryContainer)
 		end
 		-- TODO handle CustomChild
 	end
-	m_LastLoadedMap = SharedUtils:GetLevelName()
+
+	m_LastLoadedLevelName = SharedUtils:GetLevelName()
+	m_LastLoadedGameModeName = SharedUtils:GetCurrentGameMode()
 
 	local s_WorldPartReference = WorldPartReferenceObjectData()
 	s_WorldPartReference.blueprint = s_World
@@ -255,8 +258,8 @@ Events:Subscribe('Level:LoadingInfo', function(p_Info)
 
 		s_PrimaryLevel = LevelData(s_PrimaryLevel)
 
-		if m_LastLoadedMap == SharedUtils:GetLevelName() then
-			print('Same map loading, skipping')
+		if m_LastLoadedLevelName == SharedUtils:GetLevelName() and m_LastLoadedGameModeName == SharedUtils:GetCurrentGameMode() then
+			print('Same map and gamemode loading, skipping')
 			return
 		end
 
