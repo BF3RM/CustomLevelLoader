@@ -99,7 +99,7 @@ local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
 end
 
 local function CreateWorldPart(p_PrimaryLevel, p_RegistryContainer)
-	local s_World = WorldPartData('Z0000000-0000-0000-0000-000WORLDPART')
+	local s_World = WorldPartData(Guid('68D438B3-FF1B-47D7-BCB4-F484E67CA700'))
 	p_RegistryContainer.blueprintRegistry:add(s_World)
 
 	--find index
