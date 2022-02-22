@@ -35,12 +35,14 @@ local function PatchOriginalObject(p_Object, p_World)
 
 	if p_Object.originalRef.partitionGuid == nil or p_Object.originalRef.partitionGuid == "nil" then -- perform a search without partitionguid
 		s_Reference = ResourceManager:SearchForInstanceByGuid(Guid(p_Object.originalRef.instanceGuid))
+
 		if s_Reference == nil then
 			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid)
 			return
 		end
 	else
 		s_Reference = ResourceManager:FindInstanceByGuid(Guid(p_Object.originalRef.partitionGuid), Guid(p_Object.originalRef.instanceGuid))
+
 		if s_Reference == nil then
 			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid .. " in partition " .. p_Object.originalRef.partitionGuid)
 			return
