@@ -28,6 +28,7 @@ local m_CustomLevelData = {}
 local function PatchOriginalObject(p_Object, p_World)
 	if p_Object.originalRef == nil then
 		print("Object without original reference found, dynamic object?")
+		print(p_Object)
 		return
 	end
 
@@ -176,9 +177,13 @@ local function GetCustomLevel(p_LevelName, p_GameModeName)
 	local s_PresetJson
 
 	if Config.USE_HTTP then
-		local s_HttpResponse = Net:GetHTTP(Config.HTTP_ROOT .. s_FileName .. ".json")
+		local s_HttpOptions = HttpOptions({}, 10)
+		--ignore cert for wine users
+		s_HttpOptions.verifyCertificate = false
 
-		if not s_HttpResponse then
+		local s_HttpResponse = Net:GetHTTP(Config.HTTP_ROOT .. s_FileName .. ".json", s_HttpOptions)
+
+		if not s_HttpResponse or s_HttpResponse.status ~= 200 then
 			print('Couldn\'t find custom level data for Level: ' .. p_LevelName .. ' - GameMode: ' .. p_GameModeName)
 			return nil
 		end
