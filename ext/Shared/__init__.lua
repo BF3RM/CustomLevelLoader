@@ -1,7 +1,14 @@
 ---@class CustomLevelLoaderConfig
 ---@field USE_HTTP boolean
 ---@field HTTP_ROOT string
+---@field LOGGER_ENABLED boolean
 local Config = require "__shared/Config"
+
+local print = function(p_Message)
+	if Config.LOGGER_ENABLED then
+		print(p_Message)
+	end
+end
 
 local GameObjectOriginType = {
  Vanilla = 1,
