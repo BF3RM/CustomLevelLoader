@@ -25,6 +25,10 @@ local m_ObjectVariations = {}
 local m_PendingVariations = {}
 local m_CustomLevelData = {}
 
+local m_Defaults = {
+	variation = 0,
+}
+
 local function PatchOriginalObject(p_Object, p_World)
 	if p_Object.originalRef == nil then
 		print("Object without original reference found, dynamic object?")
@@ -101,11 +105,11 @@ local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
 	--print("AddCustomObject: " .. p_Object.transform)
 	s_Reference.blueprint = Blueprint(s_Blueprint)
 	-- s_Reference.blueprint:MakeWritable()
-
-	if m_ObjectVariations[p_Object.variation] == nil then
-		m_PendingVariations[p_Object.variation] = s_Reference
+	local s_Variation = p_Object.variation or m_Defaults.variation
+	if m_ObjectVariations[s_Variation] == nil then
+		m_PendingVariations[s_Variation] = s_Reference
 	else
-		s_Reference.objectVariation = m_ObjectVariations[p_Object.variation]
+		s_Reference.objectVariation = m_ObjectVariations[s_Variation]
 	end
 
 	s_Reference.indexInBlueprint = #p_World.objects + m_IndexCount + 1
