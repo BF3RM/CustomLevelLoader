@@ -19,3 +19,6 @@
 [submodule "ext/Shared/Levels/XP5_004"]
 	path = ext/Shared/Levels/XP5_004
 	url = https://github.com/BF3RM/XP5_004
+[submodule "ext/Shared/Levels/XP5_003"]
+	path = ext/Shared/Levels/XP5_003
+	url = https://github.com/BF3RM/XP5_003.git
