@@ -192,10 +192,12 @@ local function GetCustomLevel(p_LevelName, p_GameModeName)
 		--ignore cert for wine users
 		s_HttpOptions.verifyCertificate = false
 
-		local s_HttpResponse = Net:GetHTTP(Config.HTTP_ROOT .. s_FileName .. ".json", s_HttpOptions)
+		local s_Path = Config.HTTP_ROOT .. s_FileName .. ".json"
+
+		local s_HttpResponse = Net:GetHTTP(s_Path, s_HttpOptions)
 
 		if not s_HttpResponse or s_HttpResponse.status ~= 200 then
-			print('Couldn\'t find custom level data for Level: ' .. p_LevelName .. ' - GameMode: ' .. p_GameModeName)
+			print('Couldn\'t find custom level data for path: ' .. s_Path)
 			return nil
 		end
 
