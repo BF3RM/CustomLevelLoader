@@ -1,19 +1,19 @@
 ---@class CustomLevelLoaderConfig
 ---@field USE_HTTP boolean
----@field HTTP_ROOT string
+---@field MIRRORS string[]
 ---@field LOGGER_ENABLED boolean
 local Config = require "__shared/Config"
 
 local print = function(p_Message)
-	if Config.LOGGER_ENABLED then
+	if true then
 		print(p_Message)
 	end
 end
 
 local GameObjectOriginType = {
- Vanilla = 1,
- Custom = 2,
- CustomChild = 3
+	Vanilla = 1,
+	Custom = 2,
+	CustomChild = 3
 }
 
 local CLIENT_TIMEOUT = 25.0
@@ -181,6 +181,36 @@ local function CreateWorldPart(p_PrimaryLevel, p_RegistryContainer)
 	return s_WorldPartReference
 end
 
+---@param p_FileName string
+---@return nil|string @json table
+local function GetCustomLevelFromHttp(p_FileName)
+	if #Config.MIRRORS == 0 then
+		return nil
+	end
+
+	local s_HttpOptions = HttpOptions({}, 20)
+	--ignore cert for wine users
+	s_HttpOptions.verifyCertificate = false
+
+	for _, l_Address in ipairs(Config.MIRRORS) do
+		local s_HttpResponse = Net:GetHTTP(l_Address .. p_FileName .. ".json", s_HttpOptions)
+
+		if not s_HttpOptions then
+			print("received no response from " .. l_Address)
+		elseif s_HttpResponse.status ~= 200 then
+			print("received status " .. tostring(s_HttpResponse.status) .. " from " .. l_Address)
+		else
+			return s_HttpResponse.body
+		end
+	end
+
+	print('Couldn\'t find custom level data for: ' .. p_FileName)
+	return nil
+end
+
+---@param p_LevelName string
+---@param p_GameModeName string
+---@return table|nil
 local function GetCustomLevel(p_LevelName, p_GameModeName)
 	p_LevelName = p_LevelName:gsub(".*/", "")
 	local s_FileName = p_LevelName .. '_' .. p_GameModeName
@@ -188,18 +218,11 @@ local function GetCustomLevel(p_LevelName, p_GameModeName)
 	local s_PresetJson
 
 	if Config.USE_HTTP then
-		local s_HttpOptions = HttpOptions({}, 10)
-		--ignore cert for wine users
-		s_HttpOptions.verifyCertificate = false
+		s_PresetJson = GetCustomLevelFromHttp(s_FileName)
 
-		local s_HttpResponse = Net:GetHTTP(Config.HTTP_ROOT .. s_FileName .. ".json", s_HttpOptions)
-
-		if not s_HttpResponse or s_HttpResponse.status ~= 200 then
-			print('Couldn\'t find custom level data for Level: ' .. p_LevelName .. ' - GameMode: ' .. p_GameModeName)
+		if not s_PresetJson then
 			return nil
 		end
-
-		s_PresetJson = s_HttpResponse.body
 	else
 		local s_Path = '__shared/Levels/' .. p_LevelName .. '/' .. s_FileName
 
@@ -252,7 +275,7 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 	end
 
 	-- if l_Instance:Is("Blueprint") then
-		--print("-------"..Blueprint(l_Instance).name)
+	--print("-------"..Blueprint(l_Instance).name)
 	-- end
 
 	if s_PrimaryInstance.typeInfo.name == "LevelData" then
