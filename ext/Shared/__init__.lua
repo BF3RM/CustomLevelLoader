@@ -5,7 +5,7 @@
 local Config = require "__shared/Config"
 
 local print = function(p_Message)
-	if true then
+	if Config.LOGGER_ENABLED then
 		print(p_Message)
 	end
 end
