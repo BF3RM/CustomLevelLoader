@@ -195,7 +195,7 @@ local function GetCustomLevelFromHttp(p_FileName)
 	for _, l_Address in ipairs(Config.MIRRORS) do
 		local s_HttpResponse = Net:GetHTTP(l_Address .. p_FileName .. ".json", s_HttpOptions)
 
-		if not s_HttpOptions then
+		if not s_HttpResponse then
 			print("received no response from " .. l_Address)
 		elseif s_HttpResponse.status ~= 200 then
 			print("received status " .. tostring(s_HttpResponse.status) .. " from " .. l_Address)
