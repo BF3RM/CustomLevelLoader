@@ -4,8 +4,8 @@
 ---@field LOGGER_ENABLED boolean
 local Config = require "__shared/Config"
 
-local print = function(p_Message)
-	if Config.LOGGER_ENABLED then
+local print = function(p_Message, p_IsWarning)
+	if Config.LOGGER_ENABLED or p_IsWarning then
 		print(p_Message)
 	end
 end
@@ -38,8 +38,8 @@ local m_Defaults = {
 
 local function PatchOriginalObject(p_Object, p_World)
 	if p_Object.originalRef == nil then
-		print("Object without original reference found, dynamic object?")
-		print(p_Object)
+		print("Object without original reference found, dynamic object?", true)
+		print(p_Object, true)
 		return
 	end
 
@@ -49,14 +49,14 @@ local function PatchOriginalObject(p_Object, p_World)
 		s_Reference = ResourceManager:SearchForInstanceByGuid(Guid(p_Object.originalRef.instanceGuid))
 
 		if s_Reference == nil then
-			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid)
+			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid, true)
 			return
 		end
 	else
 		s_Reference = ResourceManager:FindInstanceByGuid(Guid(p_Object.originalRef.partitionGuid), Guid(p_Object.originalRef.instanceGuid))
 
 		if s_Reference == nil then
-			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid .. " in partition " .. p_Object.originalRef.partitionGuid)
+			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid .. " in partition " .. p_Object.originalRef.partitionGuid, true)
 			return
 		end
 	end
@@ -79,7 +79,7 @@ local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
 	local s_Blueprint = ResourceManager:FindInstanceByGuid(Guid(p_Object.blueprintCtrRef.partitionGuid), Guid(p_Object.blueprintCtrRef.instanceGuid))
 
 	if s_Blueprint == nil then
-		print('Cannot find blueprint with guid ' .. tostring(p_Object.blueprintCtrRef.instanceGuid))
+		print('Cannot find blueprint with guid ' .. tostring(p_Object.blueprintCtrRef.instanceGuid), true)
 		return
 	end
 
@@ -196,9 +196,9 @@ local function GetCustomLevelFromHttp(p_FileName)
 		local s_HttpResponse = Net:GetHTTP(l_Address .. p_FileName .. ".json", s_HttpOptions)
 
 		if not s_HttpResponse then
-			print("received no response from " .. l_Address)
+			print("Received no response from " .. l_Address, true)
 		elseif s_HttpResponse.status ~= 200 then
-			print("received status " .. tostring(s_HttpResponse.status) .. " from " .. l_Address)
+			print("Received http status " .. tostring(s_HttpResponse.status) .. " from " .. l_Address, true)
 		else
 			return s_HttpResponse.body
 		end
@@ -270,7 +270,7 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 	local s_PrimaryInstance = p_Partition.primaryInstance
 
 	if s_PrimaryInstance == nil then
-		print('Instance is null?')
+		print('Instance is null? ' .. p_Partition.name, true)
 		return
 	end
 
@@ -307,10 +307,6 @@ end)
 
 -- nº 3 in calling order
 Events:Subscribe('Level:LoadingInfo', function(p_Info)
-	if not m_CustomLevelData then
-		return
-	end
-
 	if p_Info == "Registering entity resources" then
 		print("-----Loading Info - Registering entity resources")
 
@@ -320,14 +316,14 @@ Events:Subscribe('Level:LoadingInfo', function(p_Info)
 		end
 
 		if m_PrimaryLevelGuids == nil then
-			print("m_PrimaryLevelGuids is nil, something went wrong")
+			print("m_PrimaryLevelGuids is nil, something went wrong", true)
 			return
 		end
 
 		local s_PrimaryLevel = ResourceManager:FindInstanceByGuid(m_PrimaryLevelGuids.partitionGuid, m_PrimaryLevelGuids.instanceGuid)
 
 		if s_PrimaryLevel == nil then
-			print("Couldn\'t find PrimaryLevel DataContainer, aborting")
+			print("Couldn\'t find PrimaryLevel DataContainer, aborting", true)
 			return
 		end
 
@@ -342,7 +338,7 @@ Events:Subscribe('Level:LoadingInfo', function(p_Info)
 		local s_RegistryContainer = s_PrimaryLevel.registryContainer
 
 		if s_RegistryContainer == nil then
-			print('No registryContainer found, this shouldn\'t happen')
+			print('No registryContainer found, this shouldn\'t happen', true)
 		end
 
 		s_RegistryContainer = RegistryContainer(s_RegistryContainer)
