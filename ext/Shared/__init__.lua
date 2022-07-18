@@ -195,7 +195,8 @@ local function GetCustomLevelFromHttp(p_FileName)
 	for _, l_Address in ipairs(Config.MIRRORS) do
 		local s_StartTime = SharedUtils:GetTime()
 
-		local s_HttpResponse = Net:GetHTTP(l_Address .. p_FileName .. ".json", s_HttpOptions)
+		local s_Path = l_Address .. p_FileName .. ".json"
+		local s_HttpResponse = Net:GetHTTP(s_Path, s_HttpOptions)
 
 		local s_Duration = SharedUtils:GetTime() - s_StartTime
 
@@ -204,9 +205,9 @@ local function GetCustomLevelFromHttp(p_FileName)
 		end
 
 		if not s_HttpResponse then
-			print("Received no response from " .. l_Address, true)
+			print("Received no response from " .. s_Path, true)
 		elseif s_HttpResponse.status ~= 200 then
-			print("Received http status " .. tostring(s_HttpResponse.status) .. " from " .. l_Address, true)
+			print("Received http status " .. tostring(s_HttpResponse.status) .. " from " .. s_Path, true)
 		else
 			return s_HttpResponse.body
 		end
