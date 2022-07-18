@@ -193,7 +193,15 @@ local function GetCustomLevelFromHttp(p_FileName)
 	s_HttpOptions.verifyCertificate = false
 
 	for _, l_Address in ipairs(Config.MIRRORS) do
+		local s_StartTime = SharedUtils:GetTime()
+
 		local s_HttpResponse = Net:GetHTTP(l_Address .. p_FileName .. ".json", s_HttpOptions)
+
+		local s_Duration = SharedUtils:GetTime() - s_StartTime
+
+		if s_Duration > 25.0 then
+			print("It took " .. s_Duration .. " seconds to download the custom level json", true)
+		end
 
 		if not s_HttpResponse then
 			print("Received no response from " .. l_Address, true)
