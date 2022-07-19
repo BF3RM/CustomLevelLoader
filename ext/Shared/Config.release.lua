@@ -3,5 +3,6 @@ return {
 	MIRRORS = {
 		"https://s3.bf3reality.com/assets/customlevelloader/"
 	},
-	LOGGER_ENABLED = false
+	LOGGER_ENABLED = false,
+	CLIENT_TIMEOUT = 50
 }

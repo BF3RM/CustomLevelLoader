@@ -16,7 +16,6 @@ local GameObjectOriginType = {
 	CustomChild = 3
 }
 
-local CLIENT_TIMEOUT = 25.0
 local SP_TERRAIN_WORLD_PART_DATA_GUID = Guid('68D438B3-FF1B-47D7-BCB4-F484E67CA700')
 local SP_TERRAIN_WORLD_PART_REFERENCE_OBJECT_DATA_GUID = Guid('93842B6D-0185-483D-9EF5-AD2B47BDABDE')
 
@@ -378,17 +377,17 @@ end)
 ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8ACE0D9B4'), Guid('B479A8FA-67FF-8825-9421-B31DE95B551A'), function(p_Instance)
 	p_Instance = ClientSettings(p_Instance)
 	p_Instance:MakeWritable()
-	p_Instance.loadedTimeout = CLIENT_TIMEOUT
-	p_Instance.loadingTimeout = CLIENT_TIMEOUT
-	p_Instance.ingameTimeout = CLIENT_TIMEOUT
+	p_Instance.loadedTimeout = Config.CLIENT_TIMEOUT
+	p_Instance.loadingTimeout = Config.CLIENT_TIMEOUT
+	p_Instance.ingameTimeout = Config.CLIENT_TIMEOUT
 	print("Changed ClientSettings")
 end)
 
 ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8ACE0D9B4'), Guid('818334B3-CEA6-FC3F-B524-4A0FED28CA35'), function(p_Instance)
 	p_Instance = ServerSettings(p_Instance)
 	p_Instance:MakeWritable()
-	p_Instance.loadingTimeout = CLIENT_TIMEOUT
-	p_Instance.ingameTimeout = CLIENT_TIMEOUT
-	p_Instance.timeoutTime = CLIENT_TIMEOUT
+	p_Instance.loadingTimeout = Config.CLIENT_TIMEOUT
+	p_Instance.ingameTimeout = Config.CLIENT_TIMEOUT
+	p_Instance.timeoutTime = Config.CLIENT_TIMEOUT
 	print("Changed ServerSettings")
 end)
