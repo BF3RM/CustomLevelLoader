@@ -2,7 +2,7 @@
 ---@field USE_HTTP boolean
 ---@field MIRRORS string[]
 ---@field LOGGER_ENABLED boolean
-local Config = require "__shared/Config"
+Config = require "__shared/Config"
 
 local print = function(p_Message, p_IsWarning)
 	if Config.LOGGER_ENABLED or p_IsWarning then
