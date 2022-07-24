@@ -35,6 +35,8 @@ local m_Defaults = {
 	variation = 0,
 }
 
+local m_MapGameModePaths = {}
+
 local function PatchOriginalObject(p_Object, p_World)
 	if p_Object.originalRef == nil then
 		print("Object without original reference found, dynamic object?", true)
@@ -193,6 +195,11 @@ local function GetCustomLevelFromHttp(p_FileName)
 
 	for _, l_Address in ipairs(Config.MIRRORS) do
 		local s_StartTime = SharedUtils:GetTime()
+
+		if m_MapGameModePaths[p_FileName] then
+			p_FileName = m_MapGameModePaths[p_FileName]
+			print("Adjusted file name to " .. p_FileName)
+		end
 
 		local s_Path = l_Address .. p_FileName .. ".json"
 		local s_HttpResponse = Net:GetHTTP(s_Path, s_HttpOptions)
@@ -391,3 +398,14 @@ ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8AC
 	p_Instance.timeoutTime = Config.CLIENT_TIMEOUT
 	print("Changed ServerSettings")
 end)
+
+---@param p_MapGameModePaths table
+local function _GetMapGameModePaths(p_MapGameModePaths)
+	m_MapGameModePaths = p_MapGameModePaths
+end
+
+if SharedUtils:IsServerModule() then
+	Events:Subscribe("CLL:MapGameModePaths", _GetMapGameModePaths)
+else
+	NetEvents:Subscribe("CLL:MapGameModePaths", _GetMapGameModePaths)
+end
