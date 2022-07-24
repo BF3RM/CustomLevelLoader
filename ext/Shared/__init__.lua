@@ -400,12 +400,6 @@ ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8AC
 end)
 
 ---@param p_MapGameModePaths table
-local function _GetMapGameModePaths(p_MapGameModePaths)
+Events:Subscribe("CLL:MapGameModePaths", function(p_MapGameModePaths)
 	m_MapGameModePaths = p_MapGameModePaths
-end
-
-if SharedUtils:IsServerModule() then
-	Events:Subscribe("CLL:MapGameModePaths", _GetMapGameModePaths)
-else
-	NetEvents:Subscribe("CLL:MapGameModePaths", _GetMapGameModePaths)
-end
+end)
