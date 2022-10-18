@@ -1,6 +1,4 @@
 return {
-	USE_HTTP = false,
-	MIRRORS = {},
-	LOGGER_ENABLED = false,
+	LOGGER_ENABLED = true,
 	CLIENT_TIMEOUT = 50
 }

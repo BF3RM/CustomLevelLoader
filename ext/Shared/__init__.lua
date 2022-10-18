@@ -1,227 +1,21 @@
 ---@class CustomLevelLoaderConfig
----@field USE_HTTP boolean
----@field MIRRORS string[]
 ---@field LOGGER_ENABLED boolean
+---@field CLIENT_TIMEOUT number
 Config = require "__shared/Config"
 
 local print = function(p_Message, p_IsWarning)
 	if Config.LOGGER_ENABLED or p_IsWarning then
+		if p_IsWarning then
+			p_Message = 'WARNING: ' .. p_Message
+		end
+
 		print(p_Message)
 	end
 end
 
-local GameObjectOriginType = {
-	Vanilla = 1,
-	Custom = 2,
-	CustomChild = 3
-}
-
-local SP_TERRAIN_WORLD_PART_DATA_GUID = Guid('68D438B3-FF1B-47D7-BCB4-F484E67CA700')
-local SP_TERRAIN_WORLD_PART_REFERENCE_OBJECT_DATA_GUID = Guid('93842B6D-0185-483D-9EF5-AD2B47BDABDE')
-
--- This is a global table that stores the save file data as a Lua table. Will be populated on-demand by
--- the server via NetEvents on the client-side
--- Stores LevelData DataContainer guids.
-local m_PrimaryLevelGuids = {}
-
-local m_IndexCount = 0
-local m_LastLoadedLevelName = nil
-local m_LastLoadedGameModeName = nil
-local m_ObjectVariations = {}
-local m_PendingVariations = {}
+---@type table?
 local m_CustomLevelData = {}
-
-local m_Defaults = {
-	variation = 0,
-}
-
-local m_MapGameModePaths = {}
-
-local function PatchOriginalObject(p_Object, p_World)
-	if p_Object.originalRef == nil then
-		print("Object without original reference found, dynamic object?", true)
-		print(p_Object, true)
-		return
-	end
-
-	local s_Reference = nil
-
-	if p_Object.originalRef.partitionGuid == nil or p_Object.originalRef.partitionGuid == "nil" then -- perform a search without partitionguid
-		s_Reference = ResourceManager:SearchForInstanceByGuid(Guid(p_Object.originalRef.instanceGuid))
-
-		if s_Reference == nil then
-			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid, true)
-			return
-		end
-	else
-		s_Reference = ResourceManager:FindInstanceByGuid(Guid(p_Object.originalRef.partitionGuid), Guid(p_Object.originalRef.instanceGuid))
-
-		if s_Reference == nil then
-			print("Unable to find original reference: " .. p_Object.originalRef.instanceGuid .. " in partition " .. p_Object.originalRef.partitionGuid, true)
-			return
-		end
-	end
-
-	s_Reference = _G[s_Reference.typeInfo.name](s_Reference)
-	s_Reference:MakeWritable()
-
-	if p_Object.isDeleted then
-		s_Reference.excluded = true
-	end
-
-	if p_Object.localTransform then
-		s_Reference.blueprintTransform = LinearTransform(p_Object.localTransform) -- LinearTransform(p_Object.localTransform)
-	else
-		s_Reference.blueprintTransform = LinearTransform(p_Object.transform) -- LinearTransform(p_Object.transform)
-	end
-end
-
-local function AddCustomObject(p_Object, p_World, p_RegistryContainer)
-	local s_Blueprint = ResourceManager:FindInstanceByGuid(Guid(p_Object.blueprintCtrRef.partitionGuid), Guid(p_Object.blueprintCtrRef.instanceGuid))
-
-	if s_Blueprint == nil then
-		print('Cannot find blueprint with guid ' .. tostring(p_Object.blueprintCtrRef.instanceGuid), true)
-		return
-	end
-
-	-- Filter BangerEntityData.
-	if s_Blueprint:Is('ObjectBlueprint') then
-		local s_ObjectBlueprint = ObjectBlueprint(s_Blueprint)
-
-		if s_ObjectBlueprint.object and s_ObjectBlueprint.object:Is('BangerEntityData') then
-			return
-		end
-	end
-
-	local s_Reference
-
-	if s_Blueprint:Is('EffectBlueprint') then
-		s_Reference = EffectReferenceObjectData()
-		s_Reference.autoStart = true
-	else
-		s_Reference = ReferenceObjectData()
-	end
-
-	p_RegistryContainer.referenceObjectRegistry:add(s_Reference)
-
-	if p_Object.localTransform then
-		s_Reference.blueprintTransform = LinearTransform(p_Object.localTransform)
-	else
-		s_Reference.blueprintTransform = LinearTransform(p_Object.transform)
-	end
-
-	--print("AddCustomObject: " .. p_Object.transform)
-	s_Reference.blueprint = Blueprint(s_Blueprint)
-	-- s_Reference.blueprint:MakeWritable()
-	local s_Variation = p_Object.variation or m_Defaults.variation
-	if m_ObjectVariations[s_Variation] == nil then
-		m_PendingVariations[s_Variation] = s_Reference
-	else
-		s_Reference.objectVariation = m_ObjectVariations[s_Variation]
-	end
-
-	s_Reference.indexInBlueprint = #p_World.objects + m_IndexCount + 1
-	s_Reference.isEventConnectionTarget = Realm.Realm_None
-	s_Reference.isPropertyConnectionTarget = Realm.Realm_None
-	s_Reference.castSunShadowEnable = true
-	s_Reference.excluded = false
-
-	p_World.objects:add(s_Reference)
-end
-
-local function CreateWorldPart(p_PrimaryLevel, p_RegistryContainer)
-	local s_World = WorldPartData(SP_TERRAIN_WORLD_PART_DATA_GUID)
-	p_RegistryContainer.blueprintRegistry:add(s_World)
-
-	--find index
-	for _, l_Object in pairs(p_PrimaryLevel.objects) do
-		if l_Object:Is('WorldPartReferenceObjectData') then
-			local l_RefObjectData = WorldPartReferenceObjectData(l_Object)
-
-			if l_RefObjectData.blueprint:Is('WorldPartData') then
-				local s_WorldPart = WorldPartData(l_RefObjectData.blueprint)
-
-				if #s_WorldPart.objects ~= 0 then
-					local s_ROD = s_WorldPart.objects[#s_WorldPart.objects] -- last one in array
-
-					if s_ROD and s_ROD:Is('ReferenceObjectData') then
-						s_ROD = ReferenceObjectData(s_ROD)
-
-						if s_ROD.indexInBlueprint > m_IndexCount then
-							m_IndexCount = s_ROD.indexInBlueprint
-						end
-					end
-				end
-			end
-		end
-	end
-	-- m_IndexCount = 30000
-	print('Index count is: ' .. tostring(m_IndexCount))
-
-	for _, l_Object in pairs(m_CustomLevelData.data) do
-		if l_Object.origin == GameObjectOriginType.Custom then
-			if not m_CustomLevelData.vanillaOnly then
-				AddCustomObject(l_Object, s_World, p_RegistryContainer)
-			end
-		elseif l_Object.origin == GameObjectOriginType.Vanilla then
-			PatchOriginalObject(l_Object, s_World)
-		end
-		-- TODO handle CustomChild
-	end
-
-	m_LastLoadedLevelName = SharedUtils:GetLevelName()
-	m_LastLoadedGameModeName = SharedUtils:GetCurrentGameMode()
-
-	local s_WorldPartReference = WorldPartReferenceObjectData(SP_TERRAIN_WORLD_PART_REFERENCE_OBJECT_DATA_GUID)
-	s_WorldPartReference.blueprint = s_World
-
-	s_WorldPartReference.isEventConnectionTarget = Realm.Realm_None
-	s_WorldPartReference.isPropertyConnectionTarget = Realm.Realm_None
-	s_WorldPartReference.excluded = false
-
-	return s_WorldPartReference
-end
-
----@param p_FileName string
----@return nil|string @json table
-local function GetCustomLevelFromHttp(p_FileName)
-	if #Config.MIRRORS == 0 then
-		return nil
-	end
-
-	local s_HttpOptions = HttpOptions({}, 20)
-	--ignore cert for wine users
-	s_HttpOptions.verifyCertificate = false
-
-	for _, l_Address in ipairs(Config.MIRRORS) do
-		local s_StartTime = SharedUtils:GetTime()
-
-		if m_MapGameModePaths[p_FileName] then
-			p_FileName = m_MapGameModePaths[p_FileName]
-			print("Adjusted file name to " .. p_FileName)
-		end
-
-		local s_Path = l_Address .. p_FileName .. ".json"
-		local s_HttpResponse = Net:GetHTTP(s_Path, s_HttpOptions)
-
-		local s_Duration = SharedUtils:GetTime() - s_StartTime
-
-		if s_Duration > 25.0 then
-			print("It took " .. s_Duration .. " seconds to download the custom level json", true)
-		end
-
-		if not s_HttpResponse then
-			print("Received no response from " .. s_Path, true)
-		elseif s_HttpResponse.status ~= 200 then
-			print("Received http status " .. tostring(s_HttpResponse.status) .. " from " .. s_Path, true)
-		else
-			return s_HttpResponse.body
-		end
-	end
-
-	print('Couldn\'t find custom level data for: ' .. p_FileName)
-	return nil
-end
+local m_LazyLoadedCount = 0
 
 ---@param p_LevelName string
 ---@param p_GameModeName string
@@ -232,23 +26,15 @@ local function GetCustomLevel(p_LevelName, p_GameModeName)
 
 	local s_PresetJson
 
-	if Config.USE_HTTP then
-		s_PresetJson = GetCustomLevelFromHttp(s_FileName)
+	local s_Path = '__shared/Levels/' .. p_LevelName .. '/' .. s_FileName
 
-		if not s_PresetJson then
-			return nil
-		end
-	else
-		local s_Path = '__shared/Levels/' .. p_LevelName .. '/' .. s_FileName
+	local s_Ok
+	s_Ok, s_PresetJson = pcall(require, s_Path)
+	s_PresetJson = s_Ok and s_PresetJson or nil
 
-		local s_Ok
-		s_Ok, s_PresetJson = pcall(require, s_Path)
-		s_PresetJson = s_Ok and s_PresetJson or nil
-
-		if not s_PresetJson then
-			print('Couldn\'t find custom level data in path ' .. s_Path)
-			return nil
-		end
+	if not s_PresetJson then
+		print('Couldn\'t find custom level data in path ' .. s_Path)
+		return nil
 	end
 
 	local s_Preset = json.decode(s_PresetJson)
@@ -263,124 +49,126 @@ local function GetCustomLevel(p_LevelName, p_GameModeName)
 	return s_Preset
 end
 
+Hooks:Install('ResourceManager:LoadBundles', 100, function(p_Hook, p_Bundles, p_Compartment)
+	print(p_Compartment)
+	print(p_Bundles[1])
+end)
+
 -- nº 1 in calling order
 Events:Subscribe('Level:LoadResources', function()
 	print("-----Loading resources")
-	m_ObjectVariations = {}
-	m_PendingVariations = {}
+	print("MountSuperBundle: CustomLevel/XP3_Shield/XP3_Shield")
+	ResourceManager:MountSuperBundle('CustomLevel/XP3_Shield/XP3_Shield')
 
 	m_CustomLevelData = GetCustomLevel(SharedUtils:GetLevelName(), SharedUtils:GetCurrentGameMode())
+
+	for l_PartitionGuid, l_Instances in pairs(m_CustomLevelData) do
+		for _, l_InstanceGuid in ipairs(l_Instances) do
+			-- print(tostring(l_PartitionGuid) .. ' - ' .. tostring(l_InstanceGuid))
+
+			ResourceManager:RegisterInstanceLoadHandlerOnce(Guid(l_PartitionGuid), Guid(l_InstanceGuid), function(p_Instance) 
+				p_Instance = _G[p_Instance.typeInfo.name](p_Instance)
+				p_Instance:MakeWritable()
+				p_Instance.excluded = true
+			end)
+		end
+	end
 end)
 
--- nº 2 in calling order
-Events:Subscribe('Partition:Loaded', function(p_Partition)
-	if not m_CustomLevelData then
+---Patches the level, adding a SubWorldReferenceObjectData to the level that references the SubWorld in the custom bundle
+local function _PatchLevel()
+	local s_Data = LevelData(ResourceManager:SearchForDataContainer(SharedUtils:GetLevelName()))
+	s_Data:MakeWritable()
+	
+	local s_SWROD = SubWorldReferenceObjectData(Guid('6a724d44-4efd-4f7e-9249-2230121d7ecc'))
+	s_SWROD.bundleName = 'CustomLevel/XP3_Shield/ConquestLarge0'
+	s_SWROD.blueprintTransform = LinearTransform()
+	s_SWROD.blueprint = nil
+	s_SWROD.objectVariation = nil
+	s_SWROD.streamRealm = StreamRealm.StreamRealm_Both
+	s_SWROD.castSunShadowEnable = true
+	s_SWROD.excluded = false
+	s_SWROD.inclusionSettings = nil
+	s_SWROD.autoLoad = true
+	s_SWROD.isWin32SubLevel = true
+	s_SWROD.isXenonSubLevel = true
+	s_SWROD.isPs3SubLevel = true
+	s_SWROD.isEventConnectionTarget  = 2
+	s_SWROD.isPropertyConnectionTarget  = 3
+
+	local s_Partition = s_Data.partition
+
+	if not s_Partition then
+		print('Partition was nil', true)
 		return
 	end
 
-	if p_Partition == nil then
-		return
-	end
+	s_Partition:AddInstance(s_SWROD)
 
-	local s_PrimaryInstance = p_Partition.primaryInstance
+	local s_HighestIndexInPartition = 0
 
-	if s_PrimaryInstance == nil then
-		print('Instance is null? ' .. p_Partition.name, true)
-		return
-	end
+	for _, l_Instance in pairs(s_Partition.instances) do
+		if l_Instance:Is("GameObjectData") then
+			l_Instance = GameObjectData(l_Instance)
 
-	-- if l_Instance:Is("Blueprint") then
-	--print("-------"..Blueprint(l_Instance).name)
-	-- end
-
-	if s_PrimaryInstance.typeInfo.name == "LevelData" then
-		local s_Instance = LevelData(s_PrimaryInstance)
-
-		if s_Instance.name == SharedUtils:GetLevelName() then
-			print("----Registering PrimaryLevel guids")
-			s_Instance:MakeWritable()
-
-			m_PrimaryLevelGuids = {
-				instanceGuid = s_Instance.instanceGuid,
-				partitionGuid = s_Instance.partitionGuid
-			}
-		end
-	elseif s_PrimaryInstance:Is('ObjectVariation') then
-		-- Store all variations in a map.
-		local s_Variation = ObjectVariation(s_PrimaryInstance)
-		m_ObjectVariations[s_Variation.nameHash] = s_Variation
-
-		if m_PendingVariations[s_Variation.nameHash] ~= nil then
-			for _, l_Object in pairs(m_PendingVariations[s_Variation.nameHash]) do
-				l_Object.objectVariation = s_Variation
+			if l_Instance.indexInBlueprint > s_HighestIndexInPartition and l_Instance.indexInBlueprint ~= 65535 then
+				s_HighestIndexInPartition = l_Instance.indexInBlueprint
 			end
-
-			m_PendingVariations[s_Variation.nameHash] = nil
 		end
 	end
-end)
 
--- nº 3 in calling order
-Events:Subscribe('Level:LoadingInfo', function(p_Info)
-	if p_Info == "Registering entity resources" then
-		print("-----Loading Info - Registering entity resources")
+	s_SWROD.indexInBlueprint = s_HighestIndexInPartition + 1
 
-		if not m_CustomLevelData then
-			print("No custom level specified.")
-			return
+	if s_Data.registryContainer ~= nil then
+		s_Data.registryContainer:MakeWritable()
+		local s_Registry = RegistryContainer(s_Data.registryContainer)
+		s_Registry.referenceObjectRegistry:add(s_SWROD)
+	end
+
+	local s_LinkConnection = LinkConnection()
+	s_LinkConnection.target = s_SWROD
+
+	s_Data.linkConnections:add(s_LinkConnection)
+	s_Data.objects:add(s_SWROD)
+	print('Patched level')
+end
+
+Events:Subscribe('Partition:Loaded', function(p_Partition)
+	local s_LevelName = SharedUtils:GetLevelName()
+
+	if not s_LevelName then return end
+
+	if p_Partition.name == s_LevelName:lower() then
+		print('Patching level')
+
+		local s_LevelData = LevelData(p_Partition.primaryInstance)
+
+		for _, l_Object in ipairs(s_LevelData.objects) do
+			l_Object = _G[l_Object.typeInfo.name](l_Object)
+
+			if l_Object.blueprint and l_Object.blueprint.isLazyLoaded then
+				m_LazyLoadedCount = m_LazyLoadedCount + 1
+				print("LazyLoadedCount " .. m_LazyLoadedCount)
+				
+				l_Object.blueprint:RegisterLoadHandlerOnce(function (p_Instance)
+					m_LazyLoadedCount = m_LazyLoadedCount - 1
+					if m_LazyLoadedCount == 0 then _PatchLevel() end
+				end)
+			end
 		end
 
-		if m_PrimaryLevelGuids == nil then
-			print("m_PrimaryLevelGuids is nil, something went wrong", true)
-			return
-		end
-
-		local s_PrimaryLevel = ResourceManager:FindInstanceByGuid(m_PrimaryLevelGuids.partitionGuid, m_PrimaryLevelGuids.instanceGuid)
-
-		if s_PrimaryLevel == nil then
-			print("Couldn\'t find PrimaryLevel DataContainer, aborting", true)
-			return
-		end
-
-		s_PrimaryLevel = LevelData(s_PrimaryLevel)
-
-		if m_LastLoadedLevelName == SharedUtils:GetLevelName() and m_LastLoadedGameModeName == SharedUtils:GetCurrentGameMode() then
-			print('Same map and gamemode loading, skipping')
-			return
-		end
-
-		print("Patching level")
-		local s_RegistryContainer = s_PrimaryLevel.registryContainer
-
-		if s_RegistryContainer == nil then
-			print('No registryContainer found, this shouldn\'t happen', true)
-		end
-
-		s_RegistryContainer = RegistryContainer(s_RegistryContainer)
-		s_RegistryContainer:MakeWritable()
-
-		local s_WorldPartReference = CreateWorldPart(s_PrimaryLevel, s_RegistryContainer)
-
-		s_WorldPartReference.indexInBlueprint = #s_PrimaryLevel.objects
-
-		s_PrimaryLevel.objects:add(s_WorldPartReference)
-
-		s_RegistryContainer.referenceObjectRegistry:add(s_WorldPartReference)
-		print('Level patched')
+		if m_LazyLoadedCount == 0 then _PatchLevel() end
 	end
 end)
 
 -- Remove all DataContainer references and reset vars
 Events:Subscribe('Level:Destroy', function()
-	m_ObjectVariations = {}
-	m_PendingVariations = {}
-	m_IndexCount = 0
-
 	-- TODO: remove all custom objects from level registry and leveldata if next round is
 	-- the same map but a different save, once that is implemented. If it's a different map
 	-- there is no need to clear anything, as the leveldata will be unloaded and a new one loaded
 end)
 
+-- Increase timeout 
 ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8ACE0D9B4'), Guid('B479A8FA-67FF-8825-9421-B31DE95B551A'), function(p_Instance)
 	p_Instance = ClientSettings(p_Instance)
 	p_Instance:MakeWritable()
@@ -397,9 +185,4 @@ ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8AC
 	p_Instance.ingameTimeout = Config.CLIENT_TIMEOUT
 	p_Instance.timeoutTime = Config.CLIENT_TIMEOUT
 	print("Changed ServerSettings")
-end)
-
----@param p_MapGameModePaths table
-Events:Subscribe("CLL:MapGameModePaths", function(p_MapGameModePaths)
-	m_MapGameModePaths = p_MapGameModePaths
 end)
