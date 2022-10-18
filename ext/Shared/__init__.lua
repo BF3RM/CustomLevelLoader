@@ -3,6 +3,17 @@
 ---@field CLIENT_TIMEOUT number
 Config = require "__shared/Config"
 
+BUNDLE_PREFIX = 'CustomLevels'
+
+function string:split(sep)
+	sep = sep or ":"
+	local fields = {}
+	local pattern = string.format("([^%s]+)", sep)
+	---@diagnostic disable-next-line: discard-returns
+	self:gsub(pattern, function(c) fields[#fields + 1] = c end)
+	return fields
+end
+
 local print = function(p_Message, p_IsWarning)
 	if Config.LOGGER_ENABLED or p_IsWarning then
 		if p_IsWarning then
@@ -55,12 +66,14 @@ Hooks:Install('ResourceManager:LoadBundles', 100, function(p_Hook, p_Bundles, p_
 end)
 
 -- nº 1 in calling order
-Events:Subscribe('Level:LoadResources', function()
+Events:Subscribe('Level:LoadResources', function(p_LevelName, p_GameMode, p_IsDedicatedServer)
 	print("-----Loading resources")
-	print("MountSuperBundle: CustomLevel/XP3_Shield/XP3_Shield")
-	ResourceManager:MountSuperBundle('CustomLevel/XP3_Shield/XP3_Shield')
 
-	m_CustomLevelData = GetCustomLevel(SharedUtils:GetLevelName(), SharedUtils:GetCurrentGameMode())
+	local s_SuperBundleName = string.gsub(p_LevelName, 'Levels', BUNDLE_PREFIX)
+	print("MountSuperBundle: " .. s_SuperBundleName)
+	ResourceManager:MountSuperBundle(s_SuperBundleName)
+
+	m_CustomLevelData = GetCustomLevel(p_LevelName, p_GameMode)
 
 	for l_PartitionGuid, l_Instances in pairs(m_CustomLevelData) do
 		for _, l_InstanceGuid in ipairs(l_Instances) do
@@ -76,12 +89,14 @@ Events:Subscribe('Level:LoadResources', function()
 end)
 
 ---Patches the level, adding a SubWorldReferenceObjectData to the level that references the SubWorld in the custom bundle
-local function _PatchLevel()
+local function _PatchLevel(p_LevelName)
 	local s_Data = LevelData(ResourceManager:SearchForDataContainer(SharedUtils:GetLevelName()))
 	s_Data:MakeWritable()
-	
+
 	local s_SWROD = SubWorldReferenceObjectData(Guid('6a724d44-4efd-4f7e-9249-2230121d7ecc'))
-	s_SWROD.bundleName = 'CustomLevel/XP3_Shield/ConquestLarge0'
+	local s_SplitLevelName = p_LevelName:split('/')
+	
+	s_SWROD.bundleName = BUNDLE_PREFIX .. '/' .. s_SplitLevelName[2] .. '/' .. SharedUtils:GetCurrentGameMode()
 	s_SWROD.blueprintTransform = LinearTransform()
 	s_SWROD.blueprint = nil
 	s_SWROD.objectVariation = nil
@@ -152,12 +167,12 @@ Events:Subscribe('Partition:Loaded', function(p_Partition)
 				
 				l_Object.blueprint:RegisterLoadHandlerOnce(function (p_Instance)
 					m_LazyLoadedCount = m_LazyLoadedCount - 1
-					if m_LazyLoadedCount == 0 then _PatchLevel() end
+					if m_LazyLoadedCount == 0 then _PatchLevel(s_LevelName) end
 				end)
 			end
 		end
 
-		if m_LazyLoadedCount == 0 then _PatchLevel() end
+		if m_LazyLoadedCount == 0 then _PatchLevel(s_LevelName) end
 	end
 end)
 
