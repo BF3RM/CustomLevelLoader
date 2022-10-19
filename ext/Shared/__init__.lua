@@ -5,15 +5,6 @@ Config = require "__shared/Config"
 
 BUNDLE_PREFIX = 'CustomLevels'
 
-function string:split(sep)
-	sep = sep or ":"
-	local fields = {}
-	local pattern = string.format("([^%s]+)", sep)
-	---@diagnostic disable-next-line: discard-returns
-	self:gsub(pattern, function(c) fields[#fields + 1] = c end)
-	return fields
-end
-
 local print = function(p_Message, p_IsWarning)
 	if Config.LOGGER_ENABLED or p_IsWarning then
 		if p_IsWarning then
@@ -94,9 +85,8 @@ local function _PatchLevel(p_LevelName)
 	s_Data:MakeWritable()
 
 	local s_SWROD = SubWorldReferenceObjectData(Guid('6a724d44-4efd-4f7e-9249-2230121d7ecc'))
-	local s_SplitLevelName = p_LevelName:split('/')
 	
-	s_SWROD.bundleName = BUNDLE_PREFIX .. '/' .. s_SplitLevelName[2] .. '/' .. SharedUtils:GetCurrentGameMode()
+	s_SWROD.bundleName = BUNDLE_PREFIX .. '/' .. p_LevelName:gsub(".*/", "") .. '/' .. SharedUtils:GetCurrentGameMode()
 	s_SWROD.blueprintTransform = LinearTransform()
 	s_SWROD.blueprint = nil
 	s_SWROD.objectVariation = nil
