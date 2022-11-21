@@ -66,6 +66,11 @@ Events:Subscribe('Level:LoadResources', function(p_LevelName, p_GameMode, p_IsDe
 
 	m_CustomLevelData = GetCustomLevel(p_LevelName, p_GameMode)
 
+	if m_CustomLevelData == nil then
+		print('Could not get the level, level name: ' .. p_LevelName .. ', gamemode: ' .. p_GameMode, true)
+		return
+	end
+
 	for l_PartitionGuid, l_Instances in pairs(m_CustomLevelData) do
 		for _, l_InstanceGuid in ipairs(l_Instances) do
 			-- print(tostring(l_PartitionGuid) .. ' - ' .. tostring(l_InstanceGuid))
@@ -112,7 +117,7 @@ local function _PatchLevel(p_LevelName)
 
 	local s_HighestIndexInPartition = 0
 
-	for _, l_Instance in pairs(s_Partition.instances) do
+	for _, l_Instance in ipairs(s_Partition.instances) do
 		if l_Instance:Is("GameObjectData") then
 			l_Instance = GameObjectData(l_Instance)
 
@@ -191,3 +196,4 @@ ResourceManager:RegisterInstanceLoadHandler(Guid('C4DCACFF-ED8F-BC87-F647-0BC8AC
 	p_Instance.timeoutTime = Config.CLIENT_TIMEOUT
 	print("Changed ServerSettings")
 end)
+
