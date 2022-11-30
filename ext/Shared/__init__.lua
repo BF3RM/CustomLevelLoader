@@ -84,6 +84,22 @@ Events:Subscribe('Level:LoadResources', function(p_LevelName, p_GameMode, p_IsDe
 	end
 end)
 
+local function _GetHighestIndexInPartition(s_Partition)
+	local s_HighestIndexInPartition = 0
+
+	for _, l_Instance in ipairs(s_Partition.instances) do
+		if l_Instance:Is("GameObjectData") then
+			l_Instance = GameObjectData(l_Instance)
+
+			if l_Instance.indexInBlueprint > s_HighestIndexInPartition and l_Instance.indexInBlueprint ~= 65535 then
+				s_HighestIndexInPartition = l_Instance.indexInBlueprint
+			end
+		end
+	end
+
+	return s_HighestIndexInPartition
+end
+
 ---Patches the level, adding a SubWorldReferenceObjectData to the level that references the SubWorld in the custom bundle
 local function _PatchLevel(p_LevelName)
 	local s_Data = LevelData(ResourceManager:SearchForDataContainer(SharedUtils:GetLevelName()))
@@ -115,18 +131,7 @@ local function _PatchLevel(p_LevelName)
 
 	s_Partition:AddInstance(s_SWROD)
 
-	local s_HighestIndexInPartition = 0
-
-	for _, l_Instance in ipairs(s_Partition.instances) do
-		if l_Instance:Is("GameObjectData") then
-			l_Instance = GameObjectData(l_Instance)
-
-			if l_Instance.indexInBlueprint > s_HighestIndexInPartition and l_Instance.indexInBlueprint ~= 65535 then
-				s_HighestIndexInPartition = l_Instance.indexInBlueprint
-			end
-		end
-	end
-
+	local s_HighestIndexInPartition = _GetHighestIndexInPartition(s_Partition)
 	s_SWROD.indexInBlueprint = s_HighestIndexInPartition + 1
 
 	if s_Data.registryContainer ~= nil then
