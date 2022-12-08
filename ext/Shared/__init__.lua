@@ -16,39 +16,66 @@ local print = function(p_Message, p_IsWarning)
 end
 
 ---@type table?
-local m_CustomLevelData = {}
+local m_LevelRODMap = {}
 local m_LazyLoadedCount = 0
+
+---Finds and returns the bundle name associated with the level and gamemode (@p_Path) loaded in the 
+---case that there is a gamemode map file, and in case the map file does not exist or the path does 
+---not have an entry it returns @p_Path
+---@param p_Path string
+---@return string
+local function GetBundlePath(p_Path)
+	local _, s_BundlesMapJson = pcall(require, '__shared/Levels/BundlesMap.lua')
+	
+	if not s_BundlesMapJson then
+		return p_Path
+	end
+
+	local s_BundlesMap = json.decode(s_BundlesMapJson)
+
+	-- Replace spaces in case of custom gamemodes with spaces in their names
+	p_Path = p_Path:gsub(' ', '_')
+	
+	
+	if s_BundlesMap and s_BundlesMap[p_Path] then
+		print('Found custom bundle ' .. s_BundlesMap[p_Path] .. ' for gamemode ' .. p_Path .. ' in bundle map file')
+		return s_BundlesMap[p_Path]
+	end
+
+	return p_Path
+end
 
 ---@param p_LevelName string
 ---@param p_GameModeName string
 ---@return table|nil
-local function GetCustomLevel(p_LevelName, p_GameModeName)
+local function GetLevelRODMap(p_LevelName, p_GameModeName)
 	p_LevelName = p_LevelName:gsub(".*/", "")
-	local s_FileName = p_LevelName .. '_' .. p_GameModeName
+	
+	local s_FileName = GetBundlePath(p_LevelName .. '/' .. p_GameModeName)
 
-	local s_PresetJson
+	-- File name uses _ instead of /
+	s_FileName = s_FileName:gsub('/', '_')
 
 	local s_Path = '__shared/Levels/' .. p_LevelName .. '/' .. s_FileName
 
-	local s_Ok
-	s_Ok, s_PresetJson = pcall(require, s_Path)
-	s_PresetJson = s_Ok and s_PresetJson or nil
+	local s_Ok, s_LevelRODMapJson = pcall(require, s_Path)
+	s_LevelRODMapJson = s_Ok and s_LevelRODMapJson or nil
 
-	if not s_PresetJson then
-		print('Couldn\'t find custom level data in path ' .. s_Path)
+	if not s_LevelRODMapJson then
+		print('Couldn\'t find ROD map file in path ' .. s_Path)
 		return nil
 	end
 
-	local s_Preset = json.decode(s_PresetJson)
+	local s_LevelRODMap = json.decode(s_LevelRODMapJson)
 
-	if not s_Preset then
-		error('Couldn\'t decode json preset')
+	if not s_LevelRODMap then
+		error('Couldn\'t decode json ROD map')
 		return nil
 	end
 
-	print("Preset found for Level: " .. p_LevelName .. " - GameMode: " .. p_GameModeName)
+	print("ROD map file found for Level: " .. p_LevelName .. " - GameMode: " .. p_GameModeName)
 
-	return s_Preset
+	return s_LevelRODMap
 end
 
 Hooks:Install('ResourceManager:LoadBundles', 100, function(p_Hook, p_Bundles, p_Compartment)
@@ -64,17 +91,15 @@ Events:Subscribe('Level:LoadResources', function(p_LevelName, p_GameMode, p_IsDe
 	print("MountSuperBundle: " .. s_SuperBundleName)
 	ResourceManager:MountSuperBundle(s_SuperBundleName)
 
-	m_CustomLevelData = GetCustomLevel(p_LevelName, p_GameMode)
+	m_LevelRODMap = GetLevelRODMap(p_LevelName, p_GameMode)
 
-	if m_CustomLevelData == nil then
+	if m_LevelRODMap == nil then
 		print('Could not get the level, level name: ' .. p_LevelName .. ', gamemode: ' .. p_GameMode, true)
 		return
 	end
 
-	for l_PartitionGuid, l_Instances in pairs(m_CustomLevelData) do
+	for l_PartitionGuid, l_Instances in pairs(m_LevelRODMap) do
 		for _, l_InstanceGuid in ipairs(l_Instances) do
-			-- print(tostring(l_PartitionGuid) .. ' - ' .. tostring(l_InstanceGuid))
-
 			ResourceManager:RegisterInstanceLoadHandlerOnce(Guid(l_PartitionGuid), Guid(l_InstanceGuid), function(p_Instance) 
 				p_Instance = _G[p_Instance.typeInfo.name](p_Instance)
 				p_Instance:MakeWritable()
@@ -106,8 +131,10 @@ local function _PatchLevel(p_LevelName)
 	s_Data:MakeWritable()
 
 	local s_SWROD = SubWorldReferenceObjectData(Guid('6a724d44-4efd-4f7e-9249-2230121d7ecc'))
+
+	local s_Path = GetBundlePath(p_LevelName:gsub(".*/", "") .. '/' .. SharedUtils:GetCurrentGameMode())
 	
-	s_SWROD.bundleName = BUNDLE_PREFIX .. '/' .. p_LevelName:gsub(".*/", "") .. '/' .. SharedUtils:GetCurrentGameMode()
+	s_SWROD.bundleName = BUNDLE_PREFIX .. '/' .. s_Path
 	s_SWROD.blueprintTransform = LinearTransform()
 	s_SWROD.blueprint = nil
 	s_SWROD.objectVariation = nil
