@@ -1,5 +1,7 @@
 # CustomLevelLoader
 
+> This repo was replaced by [LevelLoaderGen](https://github.com/BF3RM/LevelLoaderGen), please check it out instead!
+
 Load your custom levels by putting your custom level presets created with MapEditor into a "Levels" subfolder following this convention:
 
 Levels/LevelName/LevelName_GameModeName.lua
