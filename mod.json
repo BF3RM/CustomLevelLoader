@@ -7,6 +7,16 @@
 	"HasWebUI": false,
 	"HasVeniceEXT": true,
 	"Dependencies": {
-        "veniceext": "^1.1.0"
-    }
+		"veniceext": "^1.1.0"
+	},
+	"Superbundles": [
+		"Win32/CustomLevels/XP1_001/XP1_001",
+		"Win32/CustomLevels/XP1_002/XP1_002",
+		"Win32/CustomLevels/XP3_Shield/XP3_Shield",
+		"Win32/CustomLevels/XP3_Valley/XP3_Valley",
+		"Win32/CustomLevels/XP4_Parl/XP4_Parl",
+		"Win32/CustomLevels/XP5_001/XP5_001",
+		"Win32/CustomLevels/XP5_003/XP5_003",
+		"Win32/CustomLevels/XP5_004/XP5_004"
+	]
 }
